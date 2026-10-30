@@ -64,6 +64,11 @@
             android:screenOrientation="portrait"
             android:theme="@style/Theme.Zuocai" />
 
+        <activity
+            android:name=".ShoppingActivity"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize" />
+
     </application>
 
 </manifest>

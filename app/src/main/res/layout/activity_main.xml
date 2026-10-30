@@ -47,6 +47,16 @@
             </LinearLayout>
 
             <ImageView
+                android:id="@+id/cartButton"
+                android:layout_width="38dp"
+                android:layout_height="38dp"
+                android:background="@drawable/bg_icon_btn"
+                android:foreground="?attr/selectableItemBackgroundBorderless"
+                android:padding="9dp"
+                android:src="@drawable/ic_cart"
+                android:contentDescription="@string/shopping_title" />
+
+            <ImageView
                 android:id="@+id/importButton"
                 android:layout_width="38dp"
                 android:layout_height="38dp"

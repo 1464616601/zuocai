@@ -1597,3 +1597,111 @@ textarea.field {
   border-radius: 3px;
 }
 
+
+
+/* ---------------------------------------------------------------- 常做 / 买菜清单 */
+.badge.pinb {
+  left: auto;
+  right: 8px;
+  background: var(--brand);
+  color: #fff;
+  font-weight: 600;
+}
+
+.circle-btn.pinned { background: var(--brand); color: #fff; }
+
+.shop-list { padding: 6px 14px 16px; }
+
+.shop-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  margin-bottom: 8px;
+  border: 1px solid var(--divider);
+  border-radius: 14px;
+  background: var(--surface);
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: pan-y;
+}
+.shop-item.done { opacity: .55; }
+
+.shop-check {
+  flex: 0 0 auto;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 1.5px solid var(--text-3);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+}
+.shop-item.done .shop-check {
+  background: var(--good);
+  border-color: var(--good);
+}
+
+.shop-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-1);
+}
+.shop-item.done .shop-name { text-decoration: line-through; }
+.shop-name em {
+  display: block;
+  margin-top: 2px;
+  font-style: normal;
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--text-3);
+}
+
+.shop-empty {
+  padding: 60px 24px;
+  text-align: center;
+  line-height: 1.8;
+  color: var(--text-3);
+  font-size: 13.5px;
+}
+
+.shop-foot {
+  flex: 0 0 auto;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 10px 18px calc(14px + env(safe-area-inset-bottom));
+}
+.shop-foot button {
+  border: 1px solid var(--divider);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--text-2);
+  font-size: 13px;
+  font-family: inherit;
+  padding: 8px 14px;
+  cursor: pointer;
+}
+.shop-foot button.danger { color: #C0392B; font-weight: 600; }
+
+.shop-picker .shop-pick-list {
+  max-height: 46vh;
+  overflow-y: auto;
+  margin-top: 10px;
+  padding-right: 4px;
+}
+.shop-pick {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 4px;
+  border-bottom: 1px solid var(--divider);
+  font-size: 14px;
+  color: var(--text-1);
+}
+.shop-pick:last-child { border-bottom: 0; }
+.shop-pick input { width: 17px; height: 17px; accent-color: var(--brand); }

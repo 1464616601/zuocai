@@ -140,13 +140,16 @@ class MainActivity : AppCompatActivity() {
         binding.sortButton.setOnClickListener { showSortMenu() }
         binding.exportButton.setOnClickListener { startExport() }
         binding.importButton.setOnClickListener { startImport() }
+        binding.cartButton.setOnClickListener {
+            startActivity(android.content.Intent(this, ShoppingActivity::class.java))
+        }
     }
 
     // ---------------------------------------------------------------- 导入导出
 
     /** 系统「新建文档」：让用户选保存位置，不申请存储权限也能写文件 */
     private val createDoc = registerForActivityResult(
-        ActivityResultContracts.CreateDocument("text/plain")
+        ActivityResultContracts.CreateDocument("application/zip")
     ) { uri -> if (uri != null) writeExport(uri) }
 
     /** 系统「打开文档」：同理，不需要读存储权限 */
@@ -160,37 +163,40 @@ class MainActivity : AppCompatActivity() {
             Toast.makeText(this, R.string.export_empty, Toast.LENGTH_SHORT).show()
             return
         }
-        runCatching { createDoc.launch(Backup.suggestFileName()) }
+        runCatching { createDoc.launch(Backup.suggestZipName()) }
             .onFailure { Toast.makeText(this, R.string.export_failed, Toast.LENGTH_SHORT).show() }
     }
 
+    private fun coverBytes(name: String): ByteArray? =
+        com.jiangjinhao.zuocai.util.ImageStore.fileOf(this, name)
+            ?.takeIf { it.exists() && it.length() > 0 }?.readBytes()
+
     private fun writeExport(uri: android.net.Uri) {
         val recipes = db.list()
-        val text = Backup.export(recipes)
+        val zip = runCatching { Backup.buildZip(recipes, ::coverBytes) }.getOrNull()
+        if (zip == null) {
+            Toast.makeText(this, R.string.export_failed, Toast.LENGTH_SHORT).show()
+            return
+        }
 
         val ok = runCatching {
-            contentResolver.openOutputStream(uri, "wt")?.use { out ->
-                // 带 UTF-8 BOM：Windows 记事本靠它识别编码，否则中文可能显示成乱码。
-                // 导入端会剥掉 BOM，不影响解析。
-                out.write(byteArrayOf(0xEF.toByte(), 0xBB.toByte(), 0xBF.toByte()))
-                out.write(text.toByteArray(Charsets.UTF_8))
-            } ?: return@runCatching false
-            true
+            contentResolver.openOutputStream(uri, "wt")?.use { it.write(zip) } != null
         }.getOrDefault(false)
 
         if (!ok) {
             Toast.makeText(this, R.string.export_failed, Toast.LENGTH_SHORT).show()
             return
         }
+        val coverCount = recipes.count { !it.cover.isNullOrBlank() }
         AlertDialog.Builder(this)
             .setTitle(R.string.export_done_title)
-            .setMessage(getString(R.string.export_done_msg, recipes.size))
+            .setMessage(getString(R.string.backup_zip_done, recipes.size, coverCount))
             .setPositiveButton(R.string.dialog_ok, null)
             .show()
     }
 
     private fun startImport() {
-        runCatching { openDoc.launch(arrayOf("text/plain", "text/*")) }
+        runCatching { openDoc.launch(arrayOf("application/zip", "text/plain", "text/*")) }
             .onFailure { Toast.makeText(this, R.string.import_failed, Toast.LENGTH_SHORT).show() }
     }
 
@@ -201,6 +207,12 @@ class MainActivity : AppCompatActivity() {
 
         if (bytes == null || bytes.isEmpty()) {
             Toast.makeText(this, R.string.import_read_failed, Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        // zip = 完整备份（文本 + 变体 + 封面），TXT = 旧版纯文本备份，两者都能吃
+        if (Backup.isZip(bytes)) {
+            readZipImport(bytes)
             return
         }
 
@@ -232,6 +244,45 @@ class MainActivity : AppCompatActivity() {
                 R.string.import_done_msg_skip, result.added, result.skipped
             )
             else -> getString(R.string.import_done_msg, result.added)
+        }
+        AlertDialog.Builder(this)
+            .setTitle(R.string.import_done_title)
+            .setMessage(msg)
+            .setPositiveButton(R.string.dialog_ok, null)
+            .show()
+    }
+
+    private fun readZipImport(bytes: ByteArray) {
+        val zip = runCatching {
+            Backup.importZip(db, bytes) { name, data ->
+                // 文件名在 Backup 里已剥过路径，这里再限定后缀，只收图片
+                if (!name.endsWith(".jpg") && !name.endsWith(".jpeg") && !name.endsWith(".png")) {
+                    return@importZip false
+                }
+                runCatching {
+                    val target = java.io.File(
+                        com.jiangjinhao.zuocai.util.ImageStore.imagesDir(this), name
+                    )
+                    target.writeBytes(data)
+                    true
+                }.getOrDefault(false)
+            }
+        }.getOrElse {
+            Toast.makeText(this, R.string.import_failed, Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        selectedCategory = null
+        binding.searchInput.setText("")
+        syncChipSelection()
+        refresh()
+
+        val msg = buildString {
+            append(getString(R.string.import_done_msg, zip.result.added))
+            if (zip.variantsApplied > 0 || zip.coversRestored > 0) {
+                append("\n")
+                append(getString(R.string.backup_variants_restored, zip.variantsApplied + zip.coversRestored))
+            }
         }
         AlertDialog.Builder(this)
             .setTitle(R.string.import_done_title)

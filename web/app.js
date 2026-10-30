@@ -20,6 +20,8 @@ const I = {
   sort: '<path d="M3,18h6v-2H3V18zM3,6v2h18V6H3zM3,13h12v-2H3V13z"/>',
   check: '<path d="M9,16.17L4.83,12l-1.42,1.41L9,19 21,7l-1.41,-1.41z"/>',
   spark: '<path d="M12 2.6l1.9 5.1 5.1 1.9-5.1 1.9L12 16.6l-1.9-5.1L5 9.6l5.1-1.9L12 2.6zM18.6 15.2l.9 2.3 2.3.9-2.3.9-.9 2.3-.9-2.3-2.3-.9 2.3-.9.9-2.3z"/>',
+  pin: '<path d="M17,3H7A2,2 0 0,0 5,5V21L12,18L19,21V5C19,3.89 18.1,3 17,3Z"/>',
+  cart: '<path d="M7,18c-1.1,0 -1.99,0.9 -1.99,2S5.9,22 7,22s2,-0.9 2,-2 -0.9,-2 -2,-2zM1,2v2h2l3.6,7.59 -1.35,2.45c-0.16,0.28 -0.25,0.61 -0.25,0.96 0,1.1 0.9,2 2,2h12v-2L7.42,15c-0.14,0 -0.25,-0.11 -0.25,-0.25l0.03,-0.12 0.9,-1.63h7.45c0.75,0 1.41,-0.41 1.75,-1.03l3.58,-6.49c0.08,-0.14 0.12,-0.31 0.12,-0.48 0,-0.55 -0.45,-1 -1,-1L5.21,4l-0.94,-2L1,2zM17,18c-1.1,0 -1.99,0.9 -1.99,2s0.89,2 1.99,2 2,-0.9 2,-2 -0.9,-2 -2,-2z"/>',
   setting: '<path d="M19.14 12.94a7.07 7.07 0 0 0 0-1.88l2.03-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.6-.22l-2.39.96a7.03 7.03 0 0 0-1.62-.94l-.36-2.54a.5.5 0 0 0-.5-.42h-3.84a.5.5 0 0 0-.49.42l-.36 2.54c-.58.24-1.12.55-1.62.94l-2.39-.96a.5.5 0 0 0-.6.22L2.71 8.84a.5.5 0 0 0 .12.64l2.03 1.58a7.07 7.07 0 0 0 0 1.88l-2.03 1.58a.5.5 0 0 0-.12.64l1.92 3.32c.13.22.39.3.6.22l2.39-.96c.5.39 1.04.7 1.62.94l.36 2.54c.04.24.25.42.49.42h3.84c.25 0 .46-.18.5-.42l.36-2.54c.58-.24 1.12-.55 1.62-.94l2.39.96c.22.08.47 0 .6-.22l1.92-3.32a.5.5 0 0 0-.12-.64l-2.03-1.58zM12 15.6A3.6 3.6 0 1 1 12 8.4a3.6 3.6 0 0 1 0 7.2z"/>',
 };
 
@@ -317,6 +319,9 @@ function queryRecipes() {
 
 /** 用户选的排序方式（相关度排在它前面，只在有搜索词时生效） */
 function sortCmp(a, b) {
+  // 常做的菜永远置顶，不受排序方式影响
+  const pin = (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0);
+  if (pin) return pin;
   if (state.sort === 'name') {
     return a.name.localeCompare(b.name, 'zh-Hans-CN');
   }
@@ -360,6 +365,7 @@ function listView() {
           <div class="sub" id="listSub">记录每一次下厨的味道</div>
         </div>
         <div class="head-actions">
+          <button class="round-btn" id="btnCart" aria-label="买菜清单" title="买菜清单">${svg('cart', 19)}</button>
           <button class="round-btn" id="btnImport" aria-label="导入" title="导入">${svg('download', 19)}</button>
           <button class="round-btn" id="btnExport" aria-label="导出" title="导出">${svg('upload', 19)}</button>
         </div>
@@ -421,6 +427,7 @@ function cardHTML(r) {
       ${r.cover ? `<img data-img="${esc(r.cover)}" alt="" style="display:none">` : ''}
       <span class="ph">${strokeIcon(ICON_BOWL, 32, 1.5)}</span>
       <span class="badge">${esc(catLabel(r.category))}</span>
+      ${r.pinned ? '<span class="badge pinb">常做</span>' : ''}
     </div>
     <div class="body">
       <div class="name">${highlight(name, words)}</div>
@@ -511,6 +518,7 @@ function showList(transition = 'left') {
   };
 
   $('#fabAdd').onclick = () => openEditor(null, 'list');
+  $('#btnCart').onclick = openShopping;
   $('#btnExport').onclick = doExport;
   $('#btnImport').onclick = () => pickImportFile();
   $('#fabSort').onclick = showSortMenu;
@@ -903,6 +911,221 @@ function finishGame(key, name, score) {
   };
 }
 
+// ---------------------------------------------------------------- 做法管理
+
+/** 长按变体标签：重命名或删除。只动变体，原做法不受影响 */
+async function manageVariant(id, index) {
+  const r = state.recipes.find((x) => x.id === id);
+  const v = r && (r.variants || [])[index];
+  if (!v) return;
+  const label = v.label || '做法';
+
+  const act = await dialog({
+    title: '做法管理 · ' + label,
+    actions: [
+      { label: '重命名', value: 'rename' },
+      { label: '删除', value: 'delete', style: 'danger' },
+      { label: '取消', value: null },
+    ],
+  });
+
+  if (act === 'rename') {
+    const name = await askText({
+      title: '做法名称', message: '', placeholder: label, okLabel: '确定',
+    });
+    if (!name) return;
+    v.label = name;
+    await dbPut(r);
+    showDetail(id);
+    toast('已重命名');
+  } else if (act === 'delete') {
+    r.variants.splice(index, 1);
+    await dbPut(r);
+    if (detailVariant >= (r.variants || []).length) detailVariant = -1;
+    showDetail(id);
+    toast('已删除');
+  }
+}
+
+// ---------------------------------------------------------------- 买菜清单
+
+const SHOP_KEY = 'zuocai_shopping';
+
+function shopLoad() {
+  try { return JSON.parse(localStorage.getItem(SHOP_KEY) || '[]'); } catch { return []; }
+}
+function shopSave(items) {
+  try { localStorage.setItem(SHOP_KEY, JSON.stringify(items)); } catch { /* 忽略 */ }
+}
+
+/** 几道菜的食材并进清单。同名合并：用量一样只留一条，不一样就并排（没法做加法） */
+function shopAdd(recipes) {
+  const items = shopLoad();
+  let changed = 0;
+  for (const r of recipes) {
+    for (const ing of (r.ingredients || [])) {
+      const name = (ing.n || '').trim();
+      if (!name) continue;
+      const amount = (ing.a || '').trim();
+      const exist = items.find((i) => i.name.toLowerCase() === name.toLowerCase());
+      if (!exist) {
+        items.push({ name, amount, checked: false });
+        changed++;
+      } else if (amount && amount !== exist.amount && !exist.amount.split(' / ').includes(amount)) {
+        exist.amount = [exist.amount, amount].filter(Boolean).join(' / ');
+        changed++;
+      }
+    }
+  }
+  shopSave(items);
+  return changed;
+}
+
+async function shopDelete(idx, render) {
+  const items = shopLoad();
+  const it = items[idx];
+  if (!it) return;
+  const ok = await dialog({
+    title: '删除',
+    message: `删除「${it.name}」？`,
+    actions: [
+      { label: '取消', value: false },
+      { label: '删除', value: true, style: 'danger' },
+    ],
+  });
+  if (!ok) return;
+  items.splice(idx, 1);
+  shopSave(items);
+  render();
+  toast('已删除');
+}
+
+function openShopping() {
+  root.innerHTML = `
+  <div class="view enter-right">
+    <div class="edit-top">
+      <button class="icon-btn" id="shopBack" aria-label="返回">${svg('back', 21)}</button>
+      <div class="title">买菜清单</div>
+      <button class="btn-primary" id="shopAdd" style="min-width:auto;padding:0 14px;font-size:13px;height:36px">从菜谱添加</button>
+    </div>
+    <div class="scroll">
+      <div class="shop-list" id="shopList"></div>
+    </div>
+    <div class="shop-foot">
+      <button id="shopClearChecked">清空已勾选</button>
+      <button id="shopClearAll" class="danger">清空全部</button>
+    </div>
+  </div>`;
+
+  const render = () => {
+    const items = shopLoad();
+    const list = $('#shopList');
+    if (!items.length) {
+      list.innerHTML = `<div class="shop-empty">清单还是空的<br>点右上「从菜谱添加」，选几道菜，食材就汇总好了</div>`;
+    } else {
+      list.innerHTML = items.map((it, i) => `
+        <div class="shop-item ${it.checked ? 'done' : ''}" data-i="${i}">
+          <span class="shop-check">${it.checked ? svg('check', 13) : ''}</span>
+          <div class="shop-name">${esc(it.name)}<em>${esc(it.amount || '')}</em></div>
+        </div>`).join('');
+    }
+    $('#shopClearChecked').style.visibility = items.some((i) => i.checked) ? 'visible' : 'hidden';
+    $('#shopClearAll').style.visibility = items.length ? 'visible' : 'hidden';
+  };
+
+  const listEl = $('#shopList');
+
+  // 点行勾/取消；长按删除
+  let lpTimer = null;
+  let lpFired = false;
+  listEl.addEventListener('pointerdown', (e) => {
+    const row = e.target.closest('.shop-item');
+    if (!row) return;
+    lpFired = false;
+    const idx = Number(row.dataset.i);
+    lpTimer = setTimeout(() => { lpFired = true; lpTimer = null; shopDelete(idx, render); }, 500);
+  });
+  ['pointerup', 'pointerleave', 'pointercancel', 'pointermove'].forEach((ev) =>
+    listEl.addEventListener(ev, () => { if (lpTimer) { clearTimeout(lpTimer); lpTimer = null; } }));
+  listEl.addEventListener('contextmenu', (e) => {
+    const row = e.target.closest('.shop-item');
+    if (!row) return;
+    e.preventDefault();
+    shopDelete(Number(row.dataset.i), render);
+  });
+  listEl.addEventListener('click', (e) => {
+    if (lpFired) { lpFired = false; return; }
+    const row = e.target.closest('.shop-item');
+    if (!row) return;
+    const items = shopLoad();
+    const it = items[Number(row.dataset.i)];
+    if (!it) return;
+    it.checked = !it.checked;
+    shopSave(items);
+    render();
+  });
+
+  $('#shopBack').onclick = () => showList('left');
+
+  $('#shopClearChecked').onclick = () => {
+    shopSave(shopLoad().filter((i) => !i.checked));
+    render();
+  };
+  $('#shopClearAll').onclick = async () => {
+    if (!shopLoad().length) return;
+    const ok = await dialog({
+      title: '清空',
+      message: '清空全部清单？',
+      actions: [
+        { label: '取消', value: false },
+        { label: '清空', value: true, style: 'danger' },
+      ],
+    });
+    if (!ok) return;
+    shopSave([]);
+    render();
+    toast('已清空');
+  };
+
+  $('#shopAdd').onclick = () => {
+    const rs = state.recipes;
+    if (!rs.length) { toast('还没有菜谱'); return; }
+    const mask = document.createElement('div');
+    mask.className = 'mask';
+    mask.innerHTML = `
+      <div class="dialog shop-picker">
+        <h4>选择要买的菜（可多选）</h4>
+        <div class="shop-pick-list">
+          ${rs.map((r, i) => `
+            <label class="shop-pick"><input type="checkbox" data-i="${i}"><span>${esc(r.name)}</span></label>`).join('')}
+        </div>
+        <div class="acts" style="margin-top:12px">
+          <button data-v="0">取消</button>
+          <button data-v="1" class="primary">加入清单</button>
+        </div>
+      </div>`;
+    phone.appendChild(mask);
+    mask.addEventListener('click', (e) => {
+      const b = e.target.closest('button[data-v]');
+      if (b) {
+        const go = b.dataset.v === '1';
+        const chosen = [...mask.querySelectorAll('input:checked')]
+          .map((i) => rs[Number(i.dataset.i)]);
+        mask.remove();
+        if (go && chosen.length) {
+          const n = shopAdd(chosen);
+          toast(`已加入 ${n} 项食材`);
+          render();
+        }
+      } else if (e.target === mask) {
+        mask.remove();
+      }
+    });
+  };
+
+  render();
+}
+
 // ---------------------------------------------------------------- 详情页
 
 // 做法切换状态：detailVariant = -1 表示原做法
@@ -984,6 +1207,7 @@ function showDetail(id, transition = 'right') {
     <button class="circle-btn left" id="btnBack" aria-label="返回">${svg('back', 21)}</button>
     ${previewing ? '' : `<button class="circle-btn right" id="btnEdit" aria-label="编辑">${svg('edit', 19)}</button>`}
     ${previewing ? '' : `<button class="circle-btn right" id="btnAi" style="right:68px" aria-label="换个做法">${svg('spark', 19)}</button>`}
+    ${previewing ? '' : `<button class="circle-btn right ${r.pinned ? 'pinned' : ''}" id="btnPin" style="right:112px" aria-label="常做" title="常做">${svg('pin', 19)}</button>`}
 
     ${previewing ? `
       <div class="preview-bar">
@@ -1004,6 +1228,14 @@ function showDetail(id, transition = 'right') {
   };
   if ($('#btnEdit')) $('#btnEdit').onclick = () => openEditor(id, 'detail');
   if ($('#btnAi')) $('#btnAi').onclick = () => askMissing(id);
+  if ($('#btnPin')) {
+    $('#btnPin').onclick = async () => {
+      r.pinned = !r.pinned;
+      await dbPut(r);
+      showDetail(id);
+      toast(r.pinned ? '已加入常做，会置顶显示' : '已取消常做');
+    };
+  }
   if ($('#variantRow')) {
     $('#variantRow').onclick = (e) => {
       const btn = e.target.closest('button[data-v]');
@@ -1011,6 +1243,23 @@ function showDetail(id, transition = 'right') {
       detailVariant = Number(btn.dataset.v);
       showDetail(id);
     };
+    // 长按（触屏）或右键（桌面）管理变体：重命名 / 删除
+    let lpTimer = null;
+    const cancelLP = () => { if (lpTimer) { clearTimeout(lpTimer); lpTimer = null; } };
+    $('#variantRow').addEventListener('pointerdown', (e) => {
+      const btn = e.target.closest('button[data-v]');
+      if (!btn || btn.dataset.v === '-1') return;
+      const vi = Number(btn.dataset.v);
+      lpTimer = setTimeout(() => { lpTimer = null; manageVariant(id, vi); }, 500);
+    });
+    ['pointerup', 'pointerleave', 'pointercancel'].forEach((ev) =>
+      $('#variantRow').addEventListener(ev, cancelLP));
+    $('#variantRow').addEventListener('contextmenu', (e) => {
+      const btn = e.target.closest('button[data-v]');
+      if (!btn || btn.dataset.v === '-1') return;
+      e.preventDefault();
+      manageVariant(id, Number(btn.dataset.v));
+    });
   }
   if ($('#pvDiscard')) $('#pvDiscard').onclick = () => { detailPending = null; showDetail(id); };
   if ($('#pvSave')) $('#pvSave').onclick = () => saveVariant(id);
