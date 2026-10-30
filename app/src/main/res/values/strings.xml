@@ -1,0 +1,222 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">我的菜谱</string>
+
+    <!-- 首页 -->
+    <string name="home_subtitle">记录每一次下厨的味道</string>
+    <string name="search_hint">搜索菜名或食材</string>
+    <string name="empty_title">还没有菜谱</string>
+    <string name="empty_desc">把拿手好菜记下来，下次照着做</string>
+    <string name="empty_action">添加第一道菜</string>
+    <string name="add_recipe">新建菜谱</string>
+
+    <!-- 分类 -->
+    <string name="cat_all">全部</string>
+    <string name="cat_home">家常菜</string>
+    <string name="cat_soup">汤羹</string>
+    <string name="cat_staple">主食</string>
+    <string name="cat_cold">凉菜</string>
+    <string name="cat_dessert">甜点</string>
+    <string name="cat_other">其他</string>
+
+    <!-- 编辑 -->
+    <string name="edit_title_new">新建菜谱</string>
+    <string name="edit_title_edit">编辑菜谱</string>
+    <string name="hint_name">菜名，如：西红柿炒鸡蛋</string>
+    <string name="hint_desc">简单描述这道菜的口感或来历（选填）</string>
+    <string name="label_cover">封面</string>
+    <string name="label_basic">基本信息</string>
+    <string name="label_ingredients">食材</string>
+    <string name="label_steps">步骤</string>
+    <string name="hint_ingredient_name">食材</string>
+    <string name="hint_ingredient_amount">用量</string>
+    <string name="hint_step">描述这一步怎么做</string>
+    <string name="add_ingredient">添加食材</string>
+    <string name="add_step">添加步骤</string>
+    <string name="save">保存</string>
+    <string name="delete">删除</string>
+    <string name="edit">编辑</string>
+    <string name="cancel">取消</string>
+    <string name="servings_unit">人份</string>
+    <string name="minutes_unit">分钟</string>
+
+    <!-- 详情 -->
+    <string name="detail_ingredients">食材清单</string>
+    <string name="detail_steps">做法步骤</string>
+    <string name="detail_empty_desc">暂无描述</string>
+
+    <!-- 提示 -->
+    <string name="toast_need_name">请先填写菜名</string>
+    <string name="toast_saved">已保存</string>
+    <string name="toast_deleted">已删除</string>
+    <string name="dialog_delete_title">删除这道菜谱？</string>
+    <string name="dialog_delete_msg">删除后无法恢复。</string>
+    <string name="dialog_discard_title">放弃修改？</string>
+    <string name="dialog_discard_msg">当前内容尚未保存。</string>
+    <string name="discard">放弃</string>
+    <string name="keep_editing">继续编辑</string>
+    <string name="pick_from_gallery">从相册选择</string>
+    <string name="take_photo">拍照</string>
+    <string name="remove_cover">移除封面</string>
+    <string name="camera_unavailable">未找到可用的相机应用</string>
+
+    <!-- 排序 -->
+    <string name="sort_recent">最近更新</string>
+    <string name="sort_name">按菜名</string>
+    <string name="sort_usage">使用最多</string>
+    <string name="sort_menu">排序方式</string>
+
+    <string name="difficulty_easy">简单</string>
+    <string name="difficulty_medium">中等</string>
+    <string name="difficulty_hard">有点难</string>
+
+    <string name="delete_recipe">删除这道菜谱</string>
+    <string name="untitled">未命名</string>
+    <string name="image_load_failed">图片读取失败</string>
+    <string name="save_failed">保存失败，请重试</string>
+
+    <string name="recipe_count">共 %1$d 道菜谱</string>
+    <string name="search_empty_title">没有找到菜谱</string>
+    <string name="search_empty_desc">换个关键词或分类试试</string>
+
+    <!-- 文本框输入 -->
+    <string name="recipe_text_hint">把菜谱文本粘进来，自动识别菜名、食材和步骤。\n\n# 花菜炒肉\n### 食材\n花菜半颗、瘦肉 200g、蒜 3 瓣、生抽 2 勺\n### 步骤\n1. 花菜掰小朵，盐水泡 5 分钟，焯水 30 秒捞出。\n2. 热锅放油，肉片炒至变色盛出，爆香蒜片下花菜翻炒。\n&gt; 小贴士：焯水别太久，否则花菜软塌不清脆。</string>
+    <string name="parse_waiting">等待输入…</string>
+    <string name="parse_preview">预览</string>
+    <string name="parse_collapse">收起</string>
+    <string name="parse_ok_fmt">%1$s · %2$d 食材 · %3$d 步骤</string>
+    <string name="parse_ok_no_step_fmt">%1$s · %2$d 食材</string>
+    <string name="parse_ok_no_ing_fmt">%1$s · %3$d 步骤</string>
+    <string name="parse_fail">没识别出内容，参考输入框里的示例格式</string>
+    <string name="pv_ingredients_fmt">食材 %1$d</string>
+    <string name="pv_steps_fmt">步骤 %1$d</string>
+
+    <!-- 分类 / 封面 / 更多 -->
+    <string name="label_category">分类</string>
+    <string name="label_cover_optional">封面（选填）</string>
+    <string name="more_options">更多选项（人份 / 时长 / 难度）</string>
+    <string name="expand">展开</string>
+    <string name="collapse">收起</string>
+
+    <!-- AI -->
+    <string name="ai_write">✨ 用 AI 写一道菜</string>
+    <string name="llm_settings">大模型设置</string>
+    <string name="ai_ask_title">想做什么菜？</string>
+    <string name="ai_ask_hint">洋葱炒肉</string>
+    <string name="ai_generating_fmt">正在生成「%1$s」</string>
+    <string name="ai_generating_desc_fmt">调用 %1$s，通常需要 3–15 秒。</string>
+    <string name="ai_generate">生成</string>
+    <string name="ai_failed">生成失败</string>
+    <string name="ai_ok">已生成，记得检查一下</string>
+    <string name="ai_replace_title">已有内容</string>
+    <string name="ai_replace_msg">文本框里已经有内容，要用 AI 结果替换吗？</string>
+    <string name="ai_append">追加到末尾</string>
+    <string name="ai_replace">替换</string>
+    <string name="ai_no_key_title">还没配置大模型</string>
+    <string name="ai_no_key_msg">需要填一个 API Key 才能生成菜谱。硅基流动有免费模型，注册即可用。</string>
+    <string name="ai_go_config">去配置</string>
+    <string name="ai_later">暂不</string>
+
+    <!-- 设置页 -->
+    <string name="settings_title">大模型设置</string>
+    <string name="settings_api_url">API 地址</string>
+    <string name="settings_model">模型名</string>
+    <string name="settings_api_key">API Key</string>
+    <string name="settings_saved">已保存</string>
+    <string name="settings_preset_hint">快速填充</string>
+    <string name="preset_zhipu">智谱 GLM-4-Flash</string>
+    <string name="preset_silicon">硅基流动</string>
+    <string name="test_connection">测试连接</string>
+    <string name="test_testing">测试中，请稍候…</string>
+    <string name="test_ok_title">连接正常</string>
+    <string name="test_ok_msg">模型「%1$s」已响应，可以正常生成菜谱。</string>
+    <string name="test_fail_title">连接失败</string>
+    <string name="menu_games">🎮 放松一下</string>
+    <string name="games_title">放松一下</string>
+    <string name="games_intro">写菜谱累了就玩两分钟。分数只存在本机。</string>
+    <string name="games_best">最高 %1$d</string>
+    <string name="game_back">返回</string>
+    <string name="game_point">分</string>
+    <string name="game_up">上</string>
+    <string name="game_down">下</string>
+    <string name="game_left">左</string>
+    <string name="game_right">右</string>
+    <string name="game_a">A</string>
+    <string name="game_b">B</string>
+    <string name="game_over_new">新纪录！</string>
+    <string name="game_over_old">本局结束</string>
+    <string name="game_over_score">得分 %1$d</string>
+    <string name="game_over_best">最高分 %1$d</string>
+    <string name="game_again">再来一局</string>
+    <string name="game_to_list">返回游戏列表</string>
+    <string name="game_score_label">本局</string>
+    <string name="game_best_label">最高</string>
+    <string name="game_over_score_label">得分</string>
+    <string name="action_import">导入</string>
+    <string name="action_export">导出</string>
+    <string name="export_empty">还没有菜谱可以导出</string>
+    <string name="export_done_title">导出成功</string>
+    <string name="export_done_msg">已导出 %1$d 道菜谱。\n\n把文件传到新手机，用同一页的「导入」选它就能还原。\n\n注意：TXT 只能带文字，封面图不会一起导出。</string>
+    <string name="export_failed">导出失败，换个保存位置再试</string>
+    <string name="import_read_failed">文件读取失败</string>
+    <string name="import_empty">文件里没识别到菜谱。请确认是用本 App 导出的 TXT，或符合「# 菜名 / ### 食材 / ### 步骤」的格式。</string>
+    <string name="import_done_title">导入完成</string>
+    <string name="import_done_msg">新增 %1$d 道菜谱。</string>
+    <string name="import_done_msg_skip">新增 %1$d 道，跳过 %2$d 道同名菜谱。</string>
+    <string name="import_done_msg_fail">新增 %1$d 道，跳过 %2$d 道同名，%3$d 段没能识别。</string>
+    <string name="import_failed">导入失败</string>
+    <string name="dialog_ok">好</string>
+    <string name="net_image">🔍 从网络找图</string>
+    <string name="net_image_title">从网络找图</string>
+    <string name="net_image_close">关闭</string>
+    <string name="net_image_failed">图片下载失败，换一张试试</string>
+    <string name="net_image_done">封面已更新</string>
+    <string name="ai_gen_cover">✨ 用 AI 生成封面</string>
+    <string name="ai_gen_cover_title">正在生成图片</string>
+    <string name="ai_gen_cover_desc">菜品图通常需要 10–30 秒</string>
+    <string name="ai_gen_cover_ok">封面已生成</string>
+    <string name="ai_gen_cover_fail">生成图片失败</string>
+    <string name="ai_gen_cover_need_name">先写好菜名再生成图片</string>
+    <string name="settings_note">智谱（推荐）：模型填 glm-4-flash，免费、响应快，实测可用。地址 https://open.bigmodel.cn/api/paas/v4\n\n注意：glm-4.7-flash 虽然更新，但免费额度限流严重，常返回 429；glm-4.5-flash 默认开启深度思考，会把输出额度消耗在思考上，正文可能为空。\n\n硅基流动：注册送 2000 万 Token，9B 以下模型永久免费，地址 https://api.siliconflow.cn/v1\n\nKey 只保存在本机，不会上传到任何服务器。</string>
+
+    <!-- 换食材 / 做法变体 -->
+    <string name="ai_variant">换个做法</string>
+    <string name="ai_variant_title">缺什么食材？</string>
+    <string name="ai_variant_msg">说清楚手头的情况，AI 会按现有做法给一版替代方案。保存后可以和原做法来回切换。</string>
+    <string name="ai_variant_hint">例：没有大蒜 / 不吃辣 / 只有一个空气炸锅</string>
+    <string name="ai_variant_generating">正在生成替代方案…</string>
+    <string name="ai_variant_fail">生成失败</string>
+    <string name="ai_variant_empty">先说下缺什么</string>
+    <string name="variant_original">原做法</string>
+    <string name="variant_preview_title">预览</string>
+    <string name="variant_save">保存为做法</string>
+    <string name="variant_discard">放弃</string>
+    <string name="variant_saved">已保存，可在顶部切换做法</string>
+    <string name="pin_badge">常做</string>
+    <string name="pin_toggle">常做</string>
+    <string name="pin_on">已加入常做，会置顶显示</string>
+    <string name="pin_off">已取消常做</string>
+    <string name="variant_manage">做法管理</string>
+    <string name="variant_rename">重命名</string>
+    <string name="variant_delete">删除做法</string>
+    <string name="variant_delete_msg">删除「%1$s」这个做法？原做法不受影响。</string>
+    <string name="variant_renamed">已重命名</string>
+    <string name="variant_deleted">已删除</string>
+    <string name="variant_new_name">做法名称</string>
+
+    <string name="shopping_title">买菜清单</string>
+    <string name="shopping_add">从菜谱添加</string>
+    <string name="shopping_empty">清单还是空的\n点「从菜谱添加」，选几道菜，食材就汇总好了</string>
+    <string name="shopping_clear_checked">清空已勾选</string>
+    <string name="shopping_clear_all">清空全部</string>
+    <string name="shopping_pick_title">选择要买的菜（可多选）</string>
+    <string name="shopping_added_fmt">已加入 %1$d 项食材</string>
+    <string name="shopping_delete_item">删除「%1$s」？</string>
+    <string name="shopping_deleted">已删除</string>
+    <string name="shopping_cleared">已清空</string>
+    <string name="dialog_delete">删除</string>
+
+    <string name="backup_zip_msg">打包菜谱文本、做法变体和封面图，导入 zip 可完整还原（旧版 TXT 仍可导入）。</string>
+    <string name="backup_zip_done">备份完成（%1$d 道菜、%2$d 张封面）</string>
+    <string name="backup_variants_restored">已还原 %1$d 道菜的做法与封面</string>
+</resources>

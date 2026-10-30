@@ -1,0 +1,11 @@
+{
+  "base_url": "https://open.bigmodel.cn/api/paas/v4",
+  "model": "glm-4-flash",
+  "api_key": "把这里换成智谱的 Key",
+
+  "image_base_url": "",
+  "image_model": "cogview-3-flash",
+  "image_api_key": "",
+
+  "_comment": "image_* 留空则复用上面的主配置。想用硅基流动的免费 Kolors 生图，填：image_base_url=https://api.siliconflow.cn/v1, image_model=Kwai-Kolors/Kolors, image_api_key=你的硅基流动Key"
+}

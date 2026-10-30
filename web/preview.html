@@ -1,0 +1,5643 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#FBF7F2">
+<title>我的菜谱 · 预览</title>
+<style>
+/* 我的菜谱 · 网页预览版
+   设计令牌与 Android 版 res/values 保持一致 */
+
+:root {
+  --brand: #E2571E;
+  --brand-dark: #B8430F;
+  --brand-light: #FFEDE3;
+  --bg: #FBF7F2;
+  --surface: #FFFFFF;
+  --surface-sunken: #F4EDE5;
+  --text-1: #2A211B;
+  --text-2: #7A6B5D;
+  --text-3: #A99A8B;
+  --divider: #EFE5DA;
+  --input-bg: #F6F0E9;
+  --chip: #F2E9DF;
+  --danger: #C62828;
+  --star: #F2A03D;
+}
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  background: radial-gradient(circle at 30% 20%, #F3EAE1 0%, #E4DAD0 60%, #D9CCC0 100%);
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB",
+               "Microsoft YaHei", "Segoe UI", Roboto, sans-serif;
+  color: var(--text-1);
+  overflow: hidden;
+}
+
+/* ---------------------------------------------------------------- 手机外壳 */
+
+.phone {
+  position: relative;
+  width: min(390px, calc((100vh - 110px) * 390 / 844));
+  height: min(844px, calc(100vh - 110px));
+  background: var(--bg);
+  border-radius: 44px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  flex: 0 0 auto;
+  box-shadow:
+    0 0 0 11px #1c1c1f,
+    0 0 0 13px #3a3a3f,
+    0 30px 70px rgba(58, 38, 20, .28);
+}
+
+.statusbar {
+  flex: 0 0 auto;
+  height: 48px;
+  padding: 0 26px 4px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  font-size: 13.5px;
+  font-weight: 600;
+  letter-spacing: .2px;
+  color: var(--text-1);
+  user-select: none;
+}
+
+.statusbar .icons { display: flex; align-items: center; gap: 5px; }
+.statusbar svg { display: block; }
+
+.homebar {
+  flex: 0 0 auto;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.homebar::after {
+  content: "";
+  width: 134px;
+  height: 5px;
+  border-radius: 3px;
+  background: #C9BEB2;
+}
+
+/* ---------------------------------------------------------------- 视图容器 */
+
+.screen {
+  position: relative;
+  flex: 1 1 auto;
+  overflow: hidden;
+}
+
+.view {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+}
+
+.view.enter-right { animation: slideInRight .26s cubic-bezier(.22,.61,.36,1); }
+.view.enter-left  { animation: slideInLeft  .26s cubic-bezier(.22,.61,.36,1); }
+
+@keyframes slideInRight { from { transform: translateX(100%); } to { transform: translateX(0); } }
+@keyframes slideInLeft  { from { transform: translateX(-22%); opacity: .6; } to { transform: translateX(0); opacity: 1; } }
+
+.scroll {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+}
+.scroll::-webkit-scrollbar { display: none; }
+
+/* ---------------------------------------------------------------- 首页 */
+
+.list-header {
+  padding: 12px 20px 0;
+}
+.list-header h1 {
+  margin: 0;
+  font-size: 27px;
+  font-weight: 700;
+  letter-spacing: .2px;
+}
+.list-header .sub {
+  margin-top: 5px;
+  font-size: 13px;
+  color: var(--text-3);
+}
+
+.searchbar {
+  position: relative;
+  margin: 16px 20px 0;
+  height: 46px;
+  background: var(--input-bg);
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  padding: 0 14px 0 43px;
+}
+.searchbar svg.ico {
+  position: absolute;
+  left: 15px;
+  opacity: .45;
+}
+.searchbar input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  outline: none;
+  font-size: 14px;
+  color: var(--text-1);
+  font-family: inherit;
+}
+.searchbar input::placeholder { color: var(--text-3); }
+.searchbar .clear {
+  display: none;
+  width: 20px;
+  height: 20px;
+  margin-left: 8px;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  cursor: pointer;
+  opacity: .38;
+  flex: 0 0 auto;
+}
+.searchbar .clear.show { display: block; }
+
+.chipbar {
+  display: flex;
+  gap: 8px;
+  padding: 14px 20px 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+  flex: 0 0 auto;
+}
+.chipbar::-webkit-scrollbar { display: none; }
+.chipbar.wrap { flex-wrap: wrap; overflow: visible; row-gap: 8px; }
+
+.chip {
+  flex: 0 0 auto;
+  padding: 8px 15px;
+  border: 0;
+  border-radius: 18px;
+  background: var(--chip);
+  color: var(--text-2);
+  font-size: 13px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background .16s, color .16s;
+  white-space: nowrap;
+}
+.chip.on {
+  background: var(--brand);
+  color: #fff;
+}
+
+/* 卡片网格 */
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  padding: 14px 20px 120px;
+}
+.grid > * { animation: cardIn .3s backwards; }
+@keyframes cardIn { from { opacity: 0; transform: translateY(8px); } }
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--divider);
+  border-radius: 18px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: transform .12s;
+}
+.card:active { transform: scale(.975); }
+
+.card .cover {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  background: linear-gradient(315deg, #F6E0CE 0%, #F1D2BC 50%, #E9C2A8 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.card .cover img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.card .cover .ph { opacity: .55; }
+
+.card .badge {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  padding: 4px 9px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, .94);
+  font-size: 10px;
+  color: var(--text-2);
+  letter-spacing: .2px;
+}
+
+.card .body { padding: 11px 12px 12px; }
+.card .name {
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.32;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  min-height: 18px;
+}
+.card .meta {
+  margin-top: 5px;
+  font-size: 11px;
+  color: var(--text-3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 空状态 */
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 60px 30px 0;
+  text-align: center;
+}
+.empty .box {
+  width: 86px;
+  height: 86px;
+  border-radius: 26px;
+  background: var(--surface-sunken);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.empty h3 { margin: 18px 0 0; font-size: 16px; }
+.empty p { margin: 6px 0 0; font-size: 13px; color: var(--text-3); }
+.empty .btn {
+  margin-top: 20px;
+  padding: 11px 22px;
+  border: 0;
+  border-radius: 30px;
+  background: var(--brand);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+/* 浮动按钮 */
+.fab {
+  position: absolute;
+  right: 22px;
+  bottom: 24px;
+  width: 58px;
+  height: 58px;
+  border: 0;
+  border-radius: 20px;
+  background: var(--brand);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 8px 20px rgba(226, 87, 30, .36);
+  transition: transform .14s, box-shadow .14s;
+}
+.fab:active { transform: scale(.94); box-shadow: 0 4px 12px rgba(226, 87, 30, .3); }
+
+.fab-mini {
+  position: absolute;
+  left: 24px;
+  bottom: 28px;
+  width: 42px;
+  height: 42px;
+  border: 1px solid var(--divider);
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--text-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(60, 40, 25, .1);
+}
+.fab-mini:active { transform: scale(.94); }
+
+/* 排序菜单 */
+.menu {
+  position: absolute;
+  left: 24px;
+  bottom: 78px;
+  min-width: 150px;
+  background: var(--surface);
+  border: 1px solid var(--divider);
+  border-radius: 16px;
+  padding: 6px;
+  box-shadow: 0 12px 30px rgba(60, 40, 25, .16);
+  z-index: 30;
+  animation: popIn .16s ease-out;
+}
+@keyframes popIn { from { opacity: 0; transform: translateY(6px) scale(.97); } }
+.menu button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  padding: 11px 12px;
+  border: 0;
+  border-radius: 11px;
+  background: transparent;
+  color: var(--text-1);
+  font-size: 13.5px;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.menu button:hover { background: var(--input-bg); }
+.menu button.on { color: var(--brand); font-weight: 600; }
+
+/* ---------------------------------------------------------------- 详情页 */
+
+.detail-cover {
+  margin: 8px 16px 0;
+  height: 268px;
+  border-radius: 22px;
+  background: linear-gradient(315deg, #F6E0CE 0%, #F1D2BC 50%, #E9C2A8 100%);
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+}
+.detail-cover img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+
+.sheet {
+  margin: 16px 16px 0;
+  background: var(--surface);
+  border: 1px solid var(--divider);
+  border-radius: 22px;
+  padding: 22px 20px 24px;
+}
+.sheet h2 {
+  margin: 0;
+  font-size: 23px;
+  line-height: 1.35;
+}
+.info-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 13px;
+  flex-wrap: wrap;
+}
+.pill {
+  padding: 5px 11px;
+  border-radius: 30px;
+  background: var(--brand-light);
+  color: var(--brand);
+  font-size: 11px;
+  font-weight: 700;
+}
+.meta-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--text-3);
+}
+.meta-item svg { flex: 0 0 auto; }
+.desc {
+  margin-top: 14px;
+  font-size: 14px;
+  line-height: 1.72;
+  color: var(--text-2);
+}
+.desc.muted { color: var(--text-3); }
+
+hr.sep {
+  border: 0;
+  height: 1px;
+  background: var(--divider);
+  margin: 20px 0 0;
+}
+
+.sec-title {
+  margin: 20px 0 0;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.ing {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 0;
+  font-size: 14px;
+}
+.ing .dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--brand);
+  flex: 0 0 auto;
+}
+.ing .n { flex: 1; color: var(--text-1); }
+.ing .a { color: var(--text-2); }
+
+.step {
+  display: flex;
+  gap: 11px;
+  margin-top: 14px;
+}
+.step .num {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--brand-light);
+  color: var(--brand);
+  font-size: 12px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+}
+.step .txt {
+  flex: 1;
+  font-size: 14px;
+  line-height: 1.72;
+  color: var(--text-2);
+  padding-top: 1px;
+}
+
+/* 悬浮圆形按钮（详情页） */
+.circle-btn {
+  position: absolute;
+  top: 14px;
+  width: 40px;
+  height: 40px;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, .92);
+  backdrop-filter: blur(6px);
+  color: var(--text-1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(60, 40, 25, .18);
+  z-index: 10;
+}
+.circle-btn.left { left: 24px; }
+.circle-btn.right { right: 24px; }
+
+/* ---------------------------------------------------------------- 编辑页 */
+
+.edit-top {
+  flex: 0 0 auto;
+  height: 54px;
+  display: flex;
+  align-items: center;
+  padding: 0 16px 0 12px;
+  gap: 6px;
+}
+.edit-top .title {
+  flex: 1;
+  font-size: 17px;
+  font-weight: 700;
+}
+.icon-btn {
+  width: 40px;
+  height: 40px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text-1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.icon-btn:active { background: rgba(0, 0, 0, .05); }
+
+.btn-primary {
+  padding: 9px 20px;
+  border: 0;
+  border-radius: 30px;
+  background: var(--brand);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+}
+.btn-primary:active { background: var(--brand-dark); }
+
+.edit-body { padding: 6px 16px 40px; }
+
+.cover-pick {
+  position: relative;
+  height: 190px;
+  border-radius: 20px;
+  background: var(--surface-sunken);
+  border: 1.5px dashed #DBCFBF;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--text-3);
+  gap: 8px;
+  font-size: 12px;
+  transition: border-color .16s, background .16s;
+}
+.cover-pick:hover { border-color: #C9B9A6; background: #F1E9DF; }
+.cover-pick img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.cover-pick .ph {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  pointer-events: none;
+}
+.cover-pick .rm {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 30px;
+  height: 30px;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, .95);
+  color: var(--text-1);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 2;
+}
+.cover-pick.has-img .rm { display: flex; }
+
+.group {
+  margin-top: 14px;
+  background: var(--surface);
+  border: 1px solid var(--divider);
+  border-radius: 20px;
+  padding: 18px 16px;
+}
+.group-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0;
+}
+.group-title { font-size: 14px; font-weight: 700; }
+
+.btn-soft {
+  padding: 6px 12px;
+  border: 0;
+  border-radius: 30px;
+  background: var(--brand-light);
+  color: var(--brand);
+  font-size: 12px;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.field {
+  width: 100%;
+  height: 48px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 14px;
+  background: var(--input-bg);
+  color: var(--text-1);
+  font-size: 15px;
+  font-family: inherit;
+  outline: none;
+}
+.field::placeholder { color: var(--text-3); }
+
+textarea.field {
+  height: auto;
+  min-height: 76px;
+  padding: 13px 14px;
+  line-height: 1.6;
+  resize: none;
+  font-size: 15px;
+}
+
+.label {
+  font-size: 12px;
+  color: var(--text-3);
+  letter-spacing: .4px;
+  margin-bottom: 7px;
+}
+
+.row-3 {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 10px;
+  margin-top: 14px;
+}
+.row-3 .field {
+  text-align: center;
+  color: var(--brand);
+  font-size: 16px;
+  font-weight: 700;
+  padding: 0 6px;
+}
+.row-3 .field.pick {
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* 食材行 */
+.ing-row, .step-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-top: 8px;
+  animation: cardIn .2s backwards;
+}
+.ing-row .field { height: 44px; font-size: 14px; padding: 0 13px; }
+.ing-row .field.name { flex: 1.15; }
+.ing-row .field.amt { flex: .85; }
+
+.step-row { align-items: flex-start; margin-top: 10px; }
+.step-row .num {
+  width: 26px;
+  height: 26px;
+  margin-top: 9px;
+  border-radius: 50%;
+  background: var(--brand-light);
+  color: var(--brand);
+  font-size: 12px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+}
+.step-row textarea.field {
+  flex: 1;
+  min-height: 62px;
+  font-size: 14px;
+  padding: 11px 13px;
+}
+
+.del-x {
+  width: 28px;
+  height: 28px;
+  border: 0;
+  background: transparent;
+  color: var(--text-3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex: 0 0 auto;
+  border-radius: 50%;
+}
+.del-x:active { background: rgba(0, 0, 0, .05); }
+.step-row .del-x { margin-top: 8px; }
+
+.danger-btn {
+  margin-top: 22px;
+  width: 100%;
+  padding: 14px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--surface-sunken);
+  color: var(--danger);
+  font-size: 14px;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+/* ---------------------------------------------------------------- 弹窗 / Toast */
+
+.mask {
+  position: absolute;
+  inset: 0;
+  background: rgba(30, 20, 12, .38);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  animation: fadeIn .16s;
+  padding: 32px;
+}
+@keyframes fadeIn { from { opacity: 0; } }
+
+.dialog {
+  width: 100%;
+  max-width: 300px;
+  background: var(--surface);
+  border-radius: 20px;
+  padding: 22px 20px 8px;
+  animation: popIn .2s ease-out;
+}
+.dialog h4 { margin: 0; font-size: 16px; }
+.dialog p { margin: 8px 0 12px; font-size: 13.5px; line-height: 1.6; color: var(--text-2); }
+.dialog .acts { display: flex; flex-direction: column; gap: 2px; }
+.dialog .acts button {
+  padding: 12px;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  font-size: 14.5px;
+  font-family: inherit;
+  cursor: pointer;
+  color: var(--text-1);
+}
+.dialog .acts button:hover { background: var(--input-bg); }
+.dialog .acts button.primary { color: var(--brand); font-weight: 700; }
+.dialog .acts button.danger { color: var(--danger); font-weight: 700; }
+
+.toast {
+  position: absolute;
+  left: 50%;
+  bottom: 112px;
+  transform: translate(-50%, 12px);
+  padding: 11px 20px;
+  border-radius: 22px;
+  background: rgba(42, 33, 27, .9);
+  color: #fff;
+  font-size: 13px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .2s, transform .2s;
+  z-index: 200;
+}
+.toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+/* ---------------------------------------------------------------- 窄屏：铺满 */
+
+@media (max-width: 480px) {
+  body { display: block; background: var(--bg); }
+  .phone {
+    width: 100%;
+    height: 100dvh;
+    border-radius: 0;
+    box-shadow: none;
+  }
+  .statusbar { display: none; }
+  .homebar { display: none; }
+  .screen { height: 100%; }
+  .view { padding-top: env(safe-area-inset-top); }
+  .fab { bottom: calc(24px + env(safe-area-inset-bottom)); }
+  .fab-mini { bottom: calc(28px + env(safe-area-inset-bottom)); }
+  .list-header { padding-top: 18px; }
+}
+
+/* 桌面提示条 */
+.hintbar {
+  flex: 0 0 auto;
+  padding: 8px 16px;
+  border-radius: 20px;
+  background: rgba(42, 33, 27, .72);
+  color: #fff;
+  font-size: 12px;
+  letter-spacing: .3px;
+  user-select: none;
+  white-space: nowrap;
+}
+@media (max-width: 480px) { .hintbar { display: none; } }
+
+/* ================================================================
+   编辑页（文本框模式）
+   ================================================================ */
+
+.write-card {
+  background: var(--surface);
+  border: 1px solid var(--divider);
+  border-radius: 20px;
+  overflow: hidden;
+  transition: border-color .16s, box-shadow .16s;
+}
+.write-card:focus-within {
+  border-color: #E9B79C;
+  box-shadow: 0 0 0 3px rgba(226, 87, 30, .07);
+}
+
+.write-card textarea {
+  display: block;
+  width: 100%;
+  min-height: 200px;
+  max-height: 42vh;
+  border: 0;
+  outline: none;
+  resize: none;
+  padding: 18px 18px 20px;
+  background: transparent;
+  color: var(--text-1);
+  font-family: inherit;
+  font-size: 14.5px;
+  line-height: 1.78;
+  letter-spacing: .1px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+.write-card textarea::-webkit-scrollbar { width: 4px; }
+.write-card textarea::-webkit-scrollbar-thumb {
+  background: #DDD2C4;
+  border-radius: 2px;
+}
+.write-card textarea::placeholder {
+  color: var(--text-3);
+  line-height: 1.85;
+  font-size: 13.5px;
+}
+
+/* 解析状态条 */
+.parse-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 4px 0;
+  font-size: 12.5px;
+  min-height: 30px;
+}
+.parse-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--text-3);
+  flex: 0 0 auto;
+  transition: background .2s;
+}
+.parse-dot.ok { background: #3E9A5C; }
+.parse-dot.warn { background: var(--star); }
+.parse-dot.idle { background: #CFC3B5; }
+
+.parse-msg {
+  flex: 1;
+  min-width: 0;
+  color: var(--text-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.parse-toggle {
+  border: 0;
+  background: transparent;
+  color: var(--brand);
+  font-size: 12.5px;
+  font-weight: 600;
+  font-family: inherit;
+  padding: 2px 4px;
+  cursor: pointer;
+  flex: 0 0 auto;
+}
+
+/* 解析预览 */
+.parse-preview {
+  margin-top: 8px;
+  padding: 14px 16px 16px;
+  border-radius: 16px;
+  background: #FCF8F3;
+  border: 1px solid var(--divider);
+  animation: cardIn .18s;
+}
+.pv-title { font-size: 14.5px; font-weight: 700; }
+.pv-sec {
+  margin-top: 12px;
+  font-size: 11px;
+  color: var(--text-3);
+  letter-spacing: .5px;
+}
+.pv-ings {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 7px;
+}
+.pv-ing {
+  padding: 4px 9px;
+  border-radius: 8px;
+  background: #fff;
+  border: 1px solid var(--divider);
+  font-size: 12px;
+  color: var(--text-1);
+}
+.pv-ing i {
+  font-style: normal;
+  color: var(--text-3);
+  margin-left: 4px;
+}
+.pv-steps {
+  margin: 7px 0 0;
+  padding-left: 17px;
+  color: var(--text-2);
+  font-size: 12.5px;
+  line-height: 1.65;
+}
+.pv-steps li { margin-bottom: 5px; }
+.pv-tip {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--divider);
+  font-size: 12px;
+  color: var(--text-2);
+  line-height: 1.6;
+}
+
+/* AI 行 */
+.ai-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 14px;
+}
+.ai-btn {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  height: 46px;
+  border: 1px solid #EFC9B4;
+  border-radius: 16px;
+  background: linear-gradient(180deg, #FFF8F3, #FFF2E9);
+  color: var(--brand);
+  font-size: 14px;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background .16s, border-color .16s;
+}
+.ai-btn:hover { background: #FFEFE4; border-color: #E9B79C; }
+.ai-btn:active { transform: scale(.99); }
+
+.icon-btn.subtle {
+  width: 46px;
+  height: 46px;
+  border: 1px solid var(--divider);
+  background: var(--surface);
+  border-radius: 16px;
+  color: var(--text-2);
+}
+
+/* 选项块 */
+.opt-block { margin-top: 18px; }
+.opt-block > .label { margin-bottom: 9px; }
+
+/* 封面缩略图 */
+.cover-strip {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.cover-thumb {
+  width: 78px;
+  height: 78px;
+  border-radius: 16px;
+  border: 1.5px dashed #DBCFBF;
+  background: var(--surface-sunken);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-3);
+  cursor: pointer;
+  overflow: hidden;
+  position: relative;
+  flex: 0 0 auto;
+  transition: border-color .16s;
+}
+.cover-thumb:hover { border-color: #C9B9A6; }
+.cover-thumb img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.cover-thumb.has-img { border-style: solid; border-color: var(--divider); }
+.cover-clear {
+  border: 0;
+  background: transparent;
+  color: var(--text-3);
+  font-size: 12.5px;
+  font-family: inherit;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  padding: 0;
+}
+
+/* 更多选项 */
+.more {
+  margin-top: 18px;
+  border: 1px solid var(--divider);
+  border-radius: 16px;
+  background: var(--surface);
+  overflow: hidden;
+}
+.more > summary {
+  list-style: none;
+  padding: 14px 16px;
+  font-size: 13px;
+  color: var(--text-2);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.more > summary::-webkit-details-marker { display: none; }
+.more > summary::after {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-right: 1.6px solid var(--text-3);
+  border-bottom: 1.6px solid var(--text-3);
+  transform: rotate(45deg) translateY(-2px);
+  transition: transform .18s;
+}
+.more[open] > summary::after { transform: rotate(-135deg) translateY(-2px); }
+.more .row-3 { margin: 0; padding: 0 16px 16px; }
+
+/* 设置页说明 */
+.note {
+  margin-top: 16px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: #FCF8F3;
+  border: 1px solid var(--divider);
+  font-size: 12.5px;
+  line-height: 1.75;
+  color: var(--text-2);
+}
+.note b { color: var(--text-1); }
+.note code {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 5px;
+  background: var(--input-bg);
+  color: var(--brand);
+  font-size: 11.5px;
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+}
+.note.warn {
+  background: #FFF8EC;
+  border-color: #F2E0C2;
+  color: #8A6A2F;
+}
+
+/* 生成中动画 */
+.loading {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+  padding: 4px 0 10px;
+}
+.loading span {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--brand);
+  opacity: .35;
+  animation: bounce 1.1s infinite ease-in-out;
+}
+.loading span:nth-child(2) { animation-delay: .16s; }
+.loading span:nth-child(3) { animation-delay: .32s; }
+@keyframes bounce {
+  0%, 80%, 100% { transform: translateY(0); opacity: .35; }
+  40% { transform: translateY(-6px); opacity: 1; }
+}
+
+/* ================================================================
+   网络搜图面板
+   ================================================================ */
+
+.mask.sheet {
+  align-items: flex-end;
+  padding: 0;
+}
+
+.picker {
+  width: 100%;
+  max-height: 82%;
+  background: var(--surface);
+  border-radius: 24px 24px 0 0;
+  display: flex;
+  flex-direction: column;
+  animation: sheetUp .24s cubic-bezier(.22, .8, .3, 1);
+  overflow: hidden;
+}
+@keyframes sheetUp { from { transform: translateY(100%); } }
+
+.picker-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 16px 10px;
+  flex: 0 0 auto;
+}
+.picker-title { font-size: 15.5px; font-weight: 700; }
+.picker-top .icon-btn {
+  width: 32px; height: 32px;
+  border: 0; background: var(--surface-sunken);
+  border-radius: 50%; color: var(--text-2);
+}
+
+.picker-search {
+  display: flex;
+  gap: 8px;
+  padding: 0 16px 12px;
+  flex: 0 0 auto;
+}
+.picker-search input {
+  flex: 1;
+  min-width: 0;
+  height: 40px;
+  padding: 0 13px;
+  border: 1px solid var(--divider);
+  border-radius: 12px;
+  background: var(--input-bg);
+  color: var(--text-1);
+  font-size: 14px;
+  font-family: inherit;
+  outline: none;
+}
+.picker-search input:focus { border-color: #E9B79C; background: #fff; }
+.picker-search button {
+  flex: 0 0 auto;
+  height: 40px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--brand);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+}
+.picker-search button:active { opacity: .85; }
+
+.picker-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0 16px calc(16px + env(safe-area-inset-bottom));
+  scrollbar-width: thin;
+}
+.picker-body::-webkit-scrollbar { width: 4px; }
+.picker-body::-webkit-scrollbar-thumb { background: #DDD2C4; border-radius: 2px; }
+
+.picker-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+
+.pick-cell {
+  position: relative;
+  aspect-ratio: 1 / 1;
+  padding: 0;
+  border: 0;
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--surface-sunken);
+  cursor: pointer;
+  transition: transform .12s;
+}
+.pick-cell:active { transform: scale(.96); }
+.pick-cell img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.picker-hint {
+  padding: 26px 8px;
+  text-align: center;
+  font-size: 13px;
+  line-height: 1.75;
+  color: var(--text-2);
+}
+
+.picker-loading {
+  padding: 40px 8px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--text-2);
+}
+.picker-loading .loading { margin-bottom: 12px; }
+
+.picker-foot {
+  padding: 12px 4px 4px;
+  text-align: center;
+  font-size: 11.5px;
+  color: var(--text-3);
+}
+
+.picker-more {
+  display: block;
+  width: 100%;
+  height: 40px;
+  margin-top: 12px;
+  border: 1px solid var(--divider);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--text-2);
+  font-size: 13px;
+  font-family: inherit;
+  cursor: pointer;
+}
+.picker-more:disabled { opacity: .5; cursor: default; }
+.picker-more:active:not(:disabled) { background: var(--surface-sunken); }
+
+/* ---------------------------------------------------------------- 导入导出按钮 */
+
+.head-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.head-text { min-width: 0; }
+
+.head-actions {
+  display: flex;
+  gap: 10px;
+  flex: 0 0 auto;
+  padding-top: 4px;
+}
+
+.round-btn {
+  width: 38px;
+  height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 50%;
+  background: var(--surface-sunken);
+  color: var(--text-2);
+  cursor: pointer;
+  transition: background .16s, transform .12s;
+}
+.round-btn:hover { background: #EFE5D9; }
+.round-btn:active { transform: scale(.94); }
+
+/* ================================================================
+   放松小游戏
+   ================================================================ */
+
+.menu-sep {
+  height: 1px;
+  margin: 5px 8px;
+  background: var(--divider);
+}
+.menu .menu-game span { font-size: 14px; }
+
+/* ---- 游戏列表 ---- */
+
+.games-body { padding: 6px 16px 24px; }
+
+.games-intro {
+  padding: 4px 4px 14px;
+  font-size: 12.5px;
+  line-height: 1.7;
+  color: var(--text-3);
+}
+
+.game-card {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  width: 100%;
+  padding: 14px 14px;
+  margin-bottom: 10px;
+  border: 1px solid var(--divider);
+  border-radius: 18px;
+  background: var(--surface);
+  color: var(--text-1);
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: transform .12s, border-color .16s, background .16s;
+}
+.game-card:hover { border-color: #E9B79C; background: #FFFCF9; }
+.game-card:active { transform: scale(.985); }
+
+.game-ico {
+  flex: 0 0 auto;
+  width: 46px;
+  height: 46px;
+  border-radius: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(315deg, #F6E0CE, #F1D2BC);
+  color: var(--brand);
+}
+
+.game-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.game-name { font-size: 14.5px; font-weight: 700; }
+.game-desc {
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--text-3);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.game-best {
+  flex: 0 0 auto;
+  font-size: 11px;
+  color: var(--brand);
+  font-weight: 600;
+}
+.game-card > svg { flex: 0 0 auto; color: var(--text-3); opacity: .6; }
+
+/* ---- 游戏页 ---- */
+
+.game-view { background: var(--bg); }
+
+.game-top {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px 10px;
+}
+
+.game-head { flex: 1; min-width: 0; }
+.game-title { font-size: 16px; font-weight: 700; }
+.game-sub {
+  margin-top: 2px;
+  font-size: 11.5px;
+  color: var(--text-3);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.game-score.pill {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  padding: 6px 12px;
+  border-radius: 14px;
+  background: #F2E9DF;
+  color: var(--brand);
+}
+.game-score.pill span { font-size: 10.5px; color: var(--text-3); }
+.game-score.pill b { font-size: 17px; font-weight: 700; font-variant-numeric: tabular-nums; min-width: 30px; text-align: right; }
+.game-score.pill.ghost { color: var(--text-2); }
+.game-score.pill.ghost b { color: var(--text-2); }
+
+.game-stage {
+  flex: 1 1 auto;
+  min-height: 0;
+  margin: 0 12px;
+  border-radius: 20px;
+  overflow: hidden;
+  background: #17130F;
+  border: 1.5px solid rgba(255, 255, 255, .2);
+  box-shadow: 0 10px 30px rgba(23, 19, 15, .18);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.game-stage canvas { display: block; }
+
+.game-pad {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 12px;
+  padding: 16px 22px calc(20px + env(safe-area-inset-bottom));
+  background: #17130F;
+}
+
+.dpad {
+  display: grid;
+  grid-template-columns: repeat(3, 56px);
+  grid-template-rows: repeat(3, 56px);
+  gap: 6px;
+}
+.pad-btn {
+  border: 0;
+  border-radius: 18px;
+  background: linear-gradient(180deg, #FFFDFA, #EFE3D4);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, .35), inset 0 1px 0 rgba(255, 255, 255, .8);
+  color: #5A4A3F;
+  font-size: 14px;
+  font-family: inherit;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
+  transition: background .1s, transform .08s;
+}
+.pad-btn:active {
+  background: linear-gradient(180deg, #C9B8A4, #BCA892);
+  transform: scale(.92);
+}
+.pad-ic { display: inline-flex; color: #5A4A3F; }
+.pad-ic.up { transform: rotate(-90deg); }
+.pad-ic.down { transform: rotate(90deg); }
+.pad-ic.left { transform: rotate(180deg); }
+.pad-btn.up { grid-area: 1 / 2; }
+.pad-btn.left { grid-area: 2 / 1; }
+.pad-btn.right { grid-area: 2 / 3; }
+.pad-btn.down { grid-area: 3 / 2; }
+
+.acts {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+}
+.act-btn {
+  width: 66px;
+  height: 66px;
+  border: 2px solid rgba(255, 255, 255, .3);
+  border-radius: 50%;
+  background: linear-gradient(180deg, #F08A4B, #E2571E);
+  color: #fff;
+  font-size: 17px;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, .4);
+  box-shadow: 0 5px 14px rgba(226, 87, 30, .35);
+  transition: transform .08s, box-shadow .1s;
+}
+.act-btn.alt {
+  width: 60px;
+  height: 60px;
+  margin-top: 26px;
+  background: linear-gradient(180deg, #5B84F5, #3B62DB);
+  box-shadow: 0 5px 14px rgba(59, 98, 219, .35);
+}
+.act-btn:active {
+  transform: scale(.92);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, .3);
+}
+
+.gameover .acts { gap: 8px; }
+.gameover .acts button {
+  width: 100%;
+  height: 44px;
+  border-radius: 12px;
+  border: 1px solid var(--divider);
+  background: var(--surface);
+  color: var(--text-1);
+  font-size: 14px;
+  font-family: inherit;
+  cursor: pointer;
+}
+.gameover .acts button.primary {
+  border: 0;
+  background: var(--brand);
+  color: #fff;
+  font-weight: 600;
+}
+.gameover p b { color: var(--brand); font-size: 17px; }
+
+/* 手机全屏时给游戏键位留出安全区 */
+@media (max-width: 480px) {
+  .game-top { padding-top: calc(14px + env(safe-area-inset-top)); }
+}
+
+
+/* ---------------------------------------------------------------- 做法变体 */
+.sheet .chipbar { margin-top: 12px; }
+
+.preview-bar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 14px 20px 22px;
+  background: var(--surface);
+  border-top: 1px solid var(--divider);
+  box-shadow: 0 -8px 24px rgba(0, 0, 0, .06);
+  z-index: 5;
+}
+
+.preview-title {
+  font-size: 13px;
+  color: var(--text-2);
+  margin-bottom: 10px;
+}
+
+.preview-acts { display: flex; gap: 12px; }
+.preview-acts .btn-ghost { flex: 0 0 34%; }
+.preview-acts .btn-primary { flex: 1; }
+
+.btn-ghost {
+  height: 44px;
+  border-radius: 14px;
+  border: 1px solid var(--divider);
+  background: transparent;
+  color: var(--text-1);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.btn-ghost:active { background: var(--surface-sunken); }
+
+/* 搜索命中高亮 */
+.card .name mark {
+  background: var(--brand-light);
+  color: var(--brand);
+  padding: 0 1px;
+  border-radius: 3px;
+}
+
+
+</style>
+</head>
+<body>
+
+<div class="phone">
+  <div class="statusbar">
+    <span id="clock">9:41</span>
+    <span class="icons">
+      <svg width="17" height="11" viewBox="0 0 17 11" fill="currentColor" aria-hidden="true">
+        <rect x="0" y="7" width="3" height="4" rx="1"/>
+        <rect x="4.5" y="5" width="3" height="6" rx="1"/>
+        <rect x="9" y="2.5" width="3" height="8.5" rx="1"/>
+        <rect x="13.5" y="0" width="3" height="11" rx="1" opacity=".35"/>
+      </svg>
+      <svg width="16" height="12" viewBox="0 0 16 12" fill="currentColor" aria-hidden="true">
+        <path d="M8 11.2 5.6 8.6a3.6 3.6 0 0 1 4.8 0L8 11.2Zm0-4.6a6.4 6.4 0 0 0-4.4 1.7L2 6.7A9.3 9.3 0 0 1 8 4.2c2.3 0 4.4.9 6 2.5l-1.6 1.6A6.4 6.4 0 0 0 8 6.6Zm0-4.2C5 2.4 2.3 3.5.3 5.4l-1.4-1.5A11.9 11.9 0 0 1 8 .2c3.5 0 6.7 1.4 9.1 3.7l-1.4 1.5A10 10 0 0 0 8 2.4Z"/>
+      </svg>
+      <svg width="25" height="12" viewBox="0 0 25 12" fill="none" aria-hidden="true">
+        <rect x=".6" y=".6" width="21" height="10.8" rx="3" stroke="currentColor" stroke-opacity=".38"/>
+        <rect x="2.2" y="2.2" width="16.4" height="7.6" rx="1.8" fill="currentColor"/>
+        <path d="M23.3 4.2v3.6a2 2 0 0 0 0-3.6Z" fill="currentColor" fill-opacity=".45"/>
+      </svg>
+    </span>
+  </div>
+
+  <div class="screen" id="screen"></div>
+
+  <div class="homebar"></div>
+</div>
+
+<div class="hintbar">网页预览版 · 功能与 APK 一致，数据存在浏览器本地</div>
+
+<script>
+// App 内置默认菜谱，与 app/src/main/assets/default_recipes.txt 内容一致
+window.DEFAULT_RECIPES_TEXT = "==========  菜谱 1  ==========\n\n# 轻卡凉拌鸡丝荞麦面\n\n@分类：凉菜\n@时长：25分钟\n@份量：2人份\n@难度：简单\n@封面：c01\n\n### 食材\n荞麦面 100g、鸡胸肉 150g、虾仁 50g、黄瓜 半根、胡萝卜 半根、紫甘蓝 少许、鸡蛋 1个、蒜末 1勺、葱花 适量、白芝麻 1勺、小米辣 2个、辣椒面 1勺、生抽 2勺、蚝油 1勺、香醋 1勺、热油 2勺\n\n### 步骤\n1. 碗中放蒜末、葱花、白芝麻、切圈小米辣和辣椒面。\n2. 烧滚烫热油，分次淋在辣椒面和芝麻上激出香气，搅拌一下。\n3. 加 2 勺生抽、1 勺蚝油、1 勺香醋搅匀，万能酸辣酱汁就调好了。\n4. 锅中烧水，下荞麦面煮熟，捞出过凉水，口感更筋道、不粘连，沥干备用。\n5. 鸡胸肉冷水下锅加姜片煮熟，放凉后撕成细鸡丝；虾仁焯水备用。\n6. 黄瓜、胡萝卜、紫甘蓝洗净切细丝；鸡蛋摊薄饼切蛋丝，配菜都要沥干水分。\n7. 碗底铺荞麦面，依次码上鸡丝、虾仁、各色蔬菜丝和蛋丝。\n8. 淋上调好的酸辣酱汁，充分翻拌均匀即可。\n\n==========  菜谱 2  ==========\n\n# 清炒黄瓜\n\n@分类：家常菜\n@时长：10分钟\n@份量：2人份\n@难度：简单\n@封面：c02\n\n### 食材\n黄瓜 2根、大蒜 4瓣、葱花 少许、盐 适量、生抽 半勺、白糖 少许、清水 半碗、食用油 适量\n\n### 步骤\n1. 备菜 黄瓜洗净不去皮，斜切薄片；大蒜切末，葱花备用，不用盐水杀水。 ​\n2. 爆香蒜末 热锅倒油，油热下入蒜末小火炒香，炒至微黄不发苦。 ​\n3. 大火翻炒黄瓜 倒入黄瓜片，大火翻炒1分钟，炒至表皮微微变软透亮。 ​\n4. 加水焖入味（湖南特色） 倒入小半碗清水，加少许盐、半勺生抽、一点点白糖去青涩味，盖锅盖小火焖1分钟，焖出薄汤汁。 ​\n5. 翻炒出锅 开盖开大火翻拌十几秒，保留少量汤汁拌饭，撒葱花拌匀即可。\n6. 汤汁少量即可，薄薄一层，不做成水煮款； ​\n7. 想吃酸辣口可以出锅沿锅边淋少许陈醋，不加辣椒也很香； ​\n\n==========  菜谱 3  ==========\n\n# 洋葱炒肉\n\n@分类：家常菜\n@时长：15分钟\n@份量：2人份\n@难度：简单\n@封面：c03\n\n### 食材\n猪肉 200g、洋葱 1 个、生抽 1 勺、老抽 1/ 2 勺、料酒 1 勺、盐 适量、糖 1/ 2 勺、生粉 1 勺、食用油 2 勺、蒜末 适量\n\n### 步骤\n1. 猪肉切片，用生抽、老抽、料酒、盐、糖、生粉腌制 15 分钟。\n2. 洋葱切丝，热锅倒油，蒜末爆香。\n3. 下入腌制好的肉片，快速翻炒至变色。\n4. 加入洋葱丝，大火快炒 2 分钟。\n5. 出锅前尝味，根据个人口味调整盐量。\n6. 出锅装盘，即可享用。\n\n> 小贴士：肉片腌制时间不宜过长，以免失去肉质的嫩滑。\n\n==========  菜谱 4  ==========\n\n# 土豆炒肉\n\n@分类：家常菜\n@时长：20分钟\n@份量：2人份\n@难度：简单\n@封面：c04\n\n### 食材\n食材准备、主料：土豆2个（约300g）、猪肉150g（里脊/前腿肉都可、里脊更嫩）、辅料：大蒜 3瓣、小葱 1根、干辣椒2-3个（不吃辣可省）、调料：生抽 1.5勺、盐 少许、蚝油 半勺、淀粉 1小勺、食用油 适量、清水少许（可选）、步骤做法、第一步：处理食材（关键、防发黑、防粘锅）\n\n### 步骤\n1. 土豆去皮，切薄片/细丝（薄片更易熟，细丝更入味），放入清水中浸泡5-10分钟，洗去表面淀粉，捞出沥干（泡过的土豆炒出来不发黑、不粘黏）。\n2. 猪肉切薄片，加1勺生抽+1小勺淀粉+少许食用油，抓匀腌制10分钟（淀粉锁水，食用油防粘，炒出来的肉超嫩）。\n3. 大蒜切片，小葱切葱花，干辣椒剪段。 第二步：炒香肉片（先炒肉，锁住嫩度）\n4. 热锅冷油，油热后放入腌好的肉片，大火快速翻炒至肉片变色、微微卷曲，立即盛出备用（别炒太久，否则肉会老）。\n5. 锅中留底油，放入蒜片、干辣椒爆香（10秒即可，别炒糊）。 第三步：炒土豆（分两种口感，按需选） 选1：脆爽口感（大火快炒） 倒入沥干的土豆片/丝，大火快速翻炒2-3分钟，炒至土豆表面微微透明、断生即可。 选2：绵软口感（加少许水焖） 倒入土豆片翻炒1分钟，加2-3勺清水，盖锅盖小火焖2-3分钟，焖至土豆用铲子能轻松压碎，再开盖大火收干水分。 第四步：混合调味，出锅\n6. 把炒好的肉片倒回锅中，和土豆一起大火翻炒30秒，让味道融合。\n7. 加半勺蚝油+少许盐（生抽和蚝油有咸味，盐别多放），翻炒均匀。\n8. 撒上葱花，再翻炒10秒，即可出锅。\n9. 土豆泡淀粉是关键，不泡的话炒的时候容易粘锅、发黑，口感也发黏。\n10. 肉片一定要先腌再炒，大火快炒变色就盛出，这是肉嫩的核心。\n11. 喜欢更香的可以加1勺豆瓣酱，和蒜片一起爆香，变成香辣土豆炒肉。\n12. 全程尽量大火，土豆别炒太久，否则会变成土豆泥，影响口感。\n\n==========  菜谱 5  ==========\n\n# 金钱蛋\n\n@分类：家常菜\n@时长：25分钟\n@份量：2人份\n@难度：简单\n@封面：c05\n\n### 食材\n金钱蛋是湖南经典家常菜、因蛋片形似铜钱得名、外酥里嫩、香辣入味、是超下饭的快手菜、成本不到5元、在家轻松复刻 。、食材准备（2-3人份）、鸡蛋：4-5个（土鸡蛋更佳、蛋黄更黄更香）、​、青红辣椒：各1个（或小米辣4- 5个、根据嗜辣程度调整）、大蒜：3-4瓣（多放更香）、蒜叶/蒜苗：1小把（ 可选、增香提味）、豆豉：1小把（湘菜灵魂、） 可选、淀粉：1-2勺（裹蛋片用、防散）、生抽：2勺（调味提鲜）、老抽：少许（上色、盐：适量（根据口味调整）、白糖：少许（中和辣味、提鲜）、食用油：适量（炸蛋需多些）\n\n### 步骤\n1. 煮蛋剥壳（关键基础）\n2. 鸡蛋冷水下锅，水没过鸡蛋2厘米 ​\n3. 大火煮沸后转小火煮10-12分钟（确保蛋黄完全凝固，不易碎） ​\n4. 捞出立即放入冰水中浸泡5-10分钟（热胀冷缩，蛋壳易剥，蛋肉紧致） ​\n5. 剥壳时从鸡蛋钝端开始，轻轻敲碎，慢慢剥除，保持蛋身完整\n6. 切蛋裹粉（防散秘诀）\n7. 刀蘸清水（或抹油），将鸡蛋切成1厘米厚的圆片，每切一刀擦净刀面（防蛋黄粘刀） ​\n8. 蛋片均匀裹一层薄淀粉（不要太厚，否则影响口感），或用淀粉+水调成薄糊裹一层 ​\n9. 用厨房纸轻轻吸干蛋片表面水分（炸时防溅油）\n10. 炸蛋定型（外酥关键）\n11. 锅中倒油，烧至六成热（筷子插入冒密集小气泡） ​\n12. 蛋片分批下锅，中小火慢炸，先不要翻动，让蛋片“躺平”煎2分钟 ​\n13. 底部金黄后翻面，再炸1-2分钟，至两面金黄酥脆捞出控油 ​\n14. 小贴士：炸时出现泡沫是正常现象，撇去即可；别用大火，易外焦里生\n15. 炒香调味（香辣灵魂）\n16. 锅中留少许底油，放入蒜末、豆豉（可选）小火炒香 ​\n17. 加入青红辣椒圈（或小米辣）炒至表皮微皱（约30秒-1分钟） ​\n18. 放入蒜白段（可选）翻炒30秒，再加入炸好的蛋片 ​\n19. 调味：加生抽2勺、老抽少许、盐适量、白糖少许，沿锅边淋1勺清水（防糊锅，让蛋片更入味） ​\n20. 轻轻翻炒（用锅铲推，别使劲扒拉，防蛋片碎），让每片蛋都裹上酱汁 ​\n21. 最后加入蒜叶/蒜苗，翻炒至断生即可出锅\n\n==========  菜谱 6  ==========\n\n# 蒜蓉炒生菜\n\n@分类：家常菜\n@时长：8分钟\n@份量：2人份\n@难度：简单\n@封面：c06\n\n### 食材\n食材准备（2人份）、主料：生菜400g（球生菜或油麦菜均可、推荐湖南本地脆嫩生菜）、​、辅料：大蒜5瓣（切末）、小米辣2个（切圈、可选、嗜辣添加）、调料：食用油 2勺、生抽 1勺、蚝油 半勺、盐 少许、白糖1小撮（提鲜）\n\n### 步骤\n1. 预处理生菜 生菜掰开叶片，放入清水冲洗干净，务必沥干水分（避免炒制时出水过多变软），可切成大片或保持整叶（根据喜好调整）。 ​\n2. 爆香辅料 热锅冷油，油温烧至五成热（微微冒烟），放入蒜末和小米辣圈，小火煸炒10秒，炒出蒜香味（注意别炒糊，蒜末变黑会发苦）。 ​\n3. 大火快炒（关键锁脆步骤） 转最大火，倒入沥干的生菜，快速颠锅翻炒，让每片生菜都裹上蒜香，炒至生菜变软变翠绿（全程不超过1分钟，避免炒老出水）。 ​\n4. 调味出锅 依次加入生抽、蚝油、白糖和少许盐，快速翻炒均匀，确认生菜入味后，立即关火装盘，撒少许葱花（可选）点缀。\n\n==========  菜谱 7  ==========\n\n# 干辣椒炒牛肉\n\n@分类：家常菜\n@时长：20分钟\n@份量：2人份\n@难度：简单\n@封面：c07\n\n### 食材\n食材准备（2-3人份）、主料：牛里脊300g（逆纹切薄片、厚度约2mm）、干辣椒15-20个（根据嗜辣程度调整、推荐用湖南本地朝天椒干）、​、辅料：姜3片（切丝）、蒜5瓣（切片）、青椒1个（切条、可选、增加清爽口感）、蒜苗2根（切段、） 可选、腌肉调料：生抽 1勺、料酒 1勺、玉米淀粉 1勺、食用油 1勺、胡椒粉 少许、炒制调料：生抽 1.5勺、老抽半勺（上色）、蚝油 1勺、盐 少许、白糖半勺（提鲜中和辣味）\n\n### 步骤\n1. 腌制牛肉（关键锁嫩步骤） 切好的牛肉片放入碗中，加入所有腌肉调料，用手抓匀至每片牛肉都裹上薄浆，静置15分钟。最后淋1勺食用油拌匀，防止炒制时粘连。 ​\n2. 预处理辅料 干辣椒剪去蒂部，剪成2cm长的段，去除部分辣椒籽（减少过辣）；姜蒜切好，青椒、蒜苗切好备用。 ​\n3. 大火快炒（避免牛肉变老） ​\n4. 热锅冷油，油温烧至六成热（手放锅上方能感觉到热气），倒入腌好的牛肉片，快速滑散，炒至牛肉表面变色（约30秒），立即盛出备用。 ​\n5. 同一口锅留底油，放入姜丝、蒜片爆香，加入干辣椒段，小火煸炒1分钟至辣椒出香（注意别炒糊，否则会发苦）。 ​\n6. 倒入之前炒好的牛肉片，加入青椒条/蒜苗段，转大火快速翻炒20秒。 ​\n7. 调味收汁 依次加入生抽、老抽、蚝油、白糖，翻炒均匀，根据口味加少许盐（腌肉已有生抽，盐要少放），大火翻炒30秒至汤汁收浓，即可关火装盘。\n\n==========  菜谱 8  ==========\n\n# 小米椒牛肉\n\n@分类：家常菜\n@时长：15分钟\n@份量：2人份\n@难度：简单\n@封面：c08\n\n### 食材\n食材准备、主料：牛里脊/牛柳 150g、小米椒 5-8个（按吃辣程度调整）、​、辅料：大蒜 2- 3瓣、生姜 1小块、青椒 半个（配色提鲜）、腌料：生抽 半勺、料酒 半勺、玉米淀粉 半勺、食用油 半勺、调料：生抽 半勺、蚝油 半勺、盐 少许、白糖 少许、做法步骤\n\n### 步骤\n1. 牛肉逆纹切薄片，加腌料抓匀，腌制10分钟（食用油锁水，炒后更嫩）。 ​\n2. 小米椒、青椒斜切段，大蒜切片，生姜切丝备用。 ​\n3. 热锅冷油，油热后下姜蒜爆香，倒入牛肉大火快速翻炒至变色，立刻盛出。 ​\n4. 锅中留底油，放小米椒和青椒段，翻炒30秒至断生，加少许盐调味。 ​\n5. 倒回炒好的牛肉，加生抽、蚝油、白糖，大火翻炒1分钟，均匀入味后关火出锅\n\n==========  菜谱 9  ==========\n\n# 空气炸锅蛋糕\n\n@分类：甜点\n@时长：60分钟\n@份量：2人份\n@难度：简单\n@封面：c09\n\n### 食材\n鸡蛋 3个、低筋面粉 90g、牛奶 50ml、食用油 30ml、细砂糖 50g、柠檬汁 几滴、油纸 1张\n\n### 步骤\n1. 取干净碗倒入油和牛奶，可用冲泡好的温热奶粉替代，搅拌至完全乳化。\n2. 加入面粉，用刮刀翻拌均匀，别过度搅拌起筋。\n3. 打入 3 个鸡蛋，蛋黄分离出来加入面糊搅至顺滑无颗粒，蛋清放进无油无水的大碗。\n4. 蛋清加 5-6 小勺细砂糖和少许柠檬汁，用打蛋器中速打发至提起能拉出直立小尖角。\n5. 取 1/3 蛋清放进蛋黄糊翻拌均匀，再全部倒回剩余蛋清，翻拌至无明显结块。\n6. 面糊倒入垫了油纸的炸篮，轻震几下排出气泡。\n7. 空气炸锅 160℃ 烤 45 分钟，出炉放凉后切块。\n\n==========  菜谱 10  ==========\n\n# 冷冻饺子煎饺\n\n@分类：主食\n@时长：15分钟\n@份量：2人份\n@难度：简单\n@封面：c10\n\n### 食材\n冷冻饺子 15个、清水 适量、食用油 适量、淀粉 1勺\n\n### 步骤\n1. 煎底：平底锅刷一层薄油，中小火加热，将冷冻饺子均匀摆入，煎1-2分钟至饺子底部呈金黄色。 ​\n2. 煮制：沿锅边倒入清水，水量没过饺子1/3即可，立刻盖上锅盖，转中火煮5-6分钟，让饺子熟透。 ​\n3. 收脆：打开锅盖，转小火将剩余水分煎干，再煎1分钟让底部更酥脆，关火即可出锅。\n\n> 小贴士：- 全程别用大火，防止底部焦糊、内部没熟。 ​ - 喜欢冰花底的话，可在加水时调一碗淀粉水（淀粉:水=1:10）代替清水，煎出来的冰花更漂亮。 要不要我给你调一份湖南口味的酸辣蘸料配方，搭配煎饺吃更开胃？\n\n==========  菜谱 11  ==========\n\n# 农家一碗香\n\n@分类：家常菜\n@时长：20分钟\n@份量：2人份\n@难度：简单\n@封面：c11\n\n### 食材\n带皮五花肉 200g、青椒 2个、红椒 1个、蒜薹1小把、鸡蛋 2个、大蒜 3瓣、生姜1小块、干辣椒3- 4个、生抽 1勺、料酒 1勺、老抽 半勺、盐 少许、鸡精 少许\n\n### 步骤\n1. 食材预处理 五花肉切薄片；青红椒去籽切菱形块；蒜薹洗净切段；大蒜切片，生姜切丝；鸡蛋加少许盐打散，下锅煎成薄蛋饼，盛出后切条备用。 ​\n2. 煸炒五花肉 热锅不放油，下入五花肉片中小火煸炒，直到肉片出油、边缘微焦，盛出多余的油脂，只留少许底油在锅中。 ​\n3. 爆香调味 锅中留底油，放入姜丝、蒜片、干辣椒爆香，下入青红椒块和蒜薹段，大火翻炒至食材微微变软。 ​\n4. 混合翻炒 倒入煸好的五花肉片和蛋条，加料酒、生抽、老抽翻炒均匀，根据口味加少许盐和鸡精调味，大火快速翻炒1分钟即可出锅。\n\n> 小贴士：- 五花肉尽量切薄，煸炒时出油更彻底，口感不腻；没有蒜薹可以用蒜苗、芹菜替换。 ​ - 调味时老抽仅用于上色，不要放多，避免菜品发黑。\n\n==========  菜谱 12  ==========\n\n# 干辣椒炒肉丸\n\n@分类：家常菜\n@时长：20分钟\n@份量：2人份\n@难度：简单\n@封面：c12\n\n### 食材\n核心：肉丸250g（三鲜肉丸/猪肉丸最佳、切半或切十字花刀、易入味）、​、香辣灵魂：干辣椒8-10个（剪段、根据辣度耐受调整、小米辣2个 可选、加辣）、花椒1小把（青红花椒均可、增香）、配菜：芹菜1小把（切段、或蒜苗2根切段、增加香气和脆感）、蒜3瓣（切片）、生姜1片（切丝）、白芝麻少许（ 可选、调味：生抽 1勺、盐 少许、白糖半勺（中和辣味、提鲜）、料酒1勺（去腥）、食用油适量（稍多 一点、干炒更香浓）\n\n### 步骤\n1. 预处理：肉丸切半（或表面划2刀），芹菜/蒜苗洗净切段，干辣椒剪段（去籽可减辣），蒜切片、姜切丝。 ​\n2. 煎/炸肉丸（关键一步）： ​\n3. 省事版：热锅放多一点油，中火放入肉丸，煎至表面金黄酥脆（约3分钟），捞出沥干油分（吸掉多余油脂，不腻）。 ​\n4. 快手版：用空气炸锅180℃烤8分钟，或微波炉加热2分钟后，再用少许油煎至金黄（省时省油）。 ​\n5. 炒出香辣味：同一口锅，留少许底油，转小火放入干辣椒段、花椒，慢慢炒出香味（别炒糊，否则发苦），再加入蒜片、姜丝爆香。 ​\n6. 混合翻炒：放入芹菜/蒜苗段，大火翻炒30秒（保持脆嫩），倒入煎好的肉丸，沿锅边淋1勺料酒去腥，加1勺生抽、少许盐、半勺白糖，大火快速翻炒1分钟，让每个肉丸都裹上香辣酱汁，最后撒上白芝麻（可选）即可出锅。 关键技巧（长沙口味适配+成功关键）：\n7. 肉丸一定要先煎/炸至表面金黄酥脆，不仅不松散，还能吸收香辣酱汁，口感更有层次。 ​\n8. 干辣椒和花椒要“小火慢炒出香”，这是“干香”的核心，火大容易糊，香味也出不来。 ​\n9. 调味别复杂：生抽提鲜、少许盐补味、半勺白糖是灵魂，能中和辣味还不抢香，长沙人炒香辣菜都爱加一点。 ​\n10. 配菜可选：没有芹菜/蒜苗，用洋葱丁、青椒块也可以，保持脆感即可，别炒太软。 口味升级（贴合长沙本地偏好）：\n11. 加1勺豆豉（提前冲洗干净，和干辣椒、花椒一起炒），鲜香味更浓，是长沙家常菜的经典搭配。 ​\n12. 喜欢更麻更辣：花椒用量加倍，或最后撒一把辣椒面，翻炒均匀（香辣加倍，越吃越上头）。 ​\n13. 用自制三鲜肉丸：虾仁和马蹄的脆感，搭配干香辣味，口感更丰富，比纯猪肉丸更解腻。\n\n==========  菜谱 13  ==========\n\n# 干辣椒炒肉炒蛋\n\n@分类：家常菜\n@时长：20分钟\n@份量：2人份\n@难度：简单\n@封面：c13\n\n### 食材\n核心：猪肉150g（选前腿肉/五花肉、肥瘦3:7、香而不柴）、鸡蛋 2个、​、香辣灵魂：干辣椒8-10个（剪段、去籽减辣、按耐受度调整）、花椒1小把（青红均可、增香）、辅料：蒜3瓣（切片）、生姜1片（切丝）、青椒1个（ 可选、切小丁、增加脆感）、白芝麻少许（可选）、调味：生抽 1.5勺、盐 少许、白糖半勺（中和辣味提鲜）、料酒1勺（去腥）、食用油 适量\n\n### 步骤\n1. 预处理： ​\n2. 猪肉切细丝（或薄片），加1勺生抽、半勺料酒、少许淀粉抓匀，腌制5分钟（更入味、不柴）； ​\n3. 鸡蛋打散，加少许盐搅匀（提前调味）； ​\n4. 干辣椒剪段，蒜切片、姜切丝，青椒切小丁（无则省略）。 ​\n5. 炒滑蛋（关键：嫩！）： 热锅放多一点油，油热后倒入蛋液，大火快速翻炒至蛋液凝固（呈嫩黄色），立即盛出备用（别炒老，后续还要回锅）。 ​\n6. 炒猪肉： 同一口锅，留少许底油，放入腌制好的猪肉丝，大火快速翻炒至表面变色、微微金黄（约1.5分钟），盛出备用。 ​\n7. 炒出香辣底味： 锅中补少许油，转小火放入干辣椒段、花椒，慢慢炒1分钟至出香（别炒糊，否则发苦），加入蒜片、姜丝、青椒丁（如有），大火爆香30秒。 ​\n8. 混合翻炒调味： 倒入炒好的猪肉丝和滑蛋，沿锅边淋1勺料酒去腥，加1.5勺生抽、少许盐、半勺白糖，大火快速翻炒1分钟，让食材均匀裹上香辣酱汁，最后撒白芝麻即可出锅。 关键技巧（长沙口味适配+成功核心）：\n9. 鸡蛋要“快炒快盛”，保持滑嫩口感；猪肉提前腌制，不柴还入味。 ​\n10. 干辣椒+花椒必须“小火慢炒出香”，这是“干香”的关键，火大易糊发苦。 ​\n11. 调味别复杂：生抽提鲜、白糖中和辣味，长沙人炒香辣菜都爱加半勺，不抢香还解腻。 ​\n\n==========  菜谱 14  ==========\n\n# 紫菜蛋花汤\n\n@分类：汤羹\n@时长：10分钟\n@份量：2人份\n@难度：简单\n@封面：c14\n\n### 食材\n食材（2人份）、干紫菜5g（1小把）、鸡蛋 2个、葱花 1根、盐 1小勺、香油 3滴、清水 500ml、​、提鲜：鸡精/味精1/4小勺 可选、香菜 1根、生抽 3滴\n\n### 步骤\n1. 鸡蛋打入碗中，加1勺清水搅打至起细泡；紫菜用温水冲10秒去杂质，挤干水分；葱花切好备用。 ​\n2. 锅中加清水烧开，放入紫菜，煮1分钟至紫菜完全散开。 ​\n3. 转小火微沸，沿锅边缓慢淋入蛋液，静置10秒后轻划散蛋花。 ​\n4. 加适量盐，可选加少许鸡精或3滴生抽提鲜，煮30秒关火，撒葱花、香菜，滴香油即可。 提鲜小妙招\n5. 没有虾皮也香浓：用1勺鸡汤/骨汤冻融化替代部分清水，或加1小块豆腐丁，口感更丰富。 ​\n6. 避免生抽放多：滴完后搅拌均匀，尝味后再补盐，防止汤变咸变浑。\n\n==========  菜谱 15  ==========\n\n# 胡萝卜炒肉\n\n@分类：家常菜\n@时长：15分钟\n@份量：2人份\n@难度：简单\n@封面：c15\n\n### 食材\n食材（2人份、性价比高）、主料：胡萝卜1根（约200g）、猪肉150g（选五花肉/瘦肉均可、五花肉更香）、​、辅料：姜蒜各 少许、生抽 1勺、料酒 1勺、盐 半勺、淀粉1小勺（可选）、食用油 2勺、步骤（10分钟搞定、操作简单）\n\n### 步骤\n1. 预处理：胡萝卜去皮切薄片；猪肉切薄片，加料酒+淀粉抓匀腌制5分钟（更嫩不柴）；姜蒜切末。 ​\n2. 炒肉：热锅倒油，油热后下姜蒜爆香，放入腌好的猪肉，大火快速翻炒至变色，盛出备用。 ​\n3. 炒胡萝卜：同一口锅补少许油，放入胡萝卜片，中小火翻炒2分钟至变软（避免炒糊）。 ​\n4. 混合调味：倒入炒好的猪肉，加生抽、盐，大火快速翻炒1分钟，让调料均匀裹住食材，关火出锅。 关键小贴士\n5. 猪肉选带点肥的，炒出来的油炒胡萝卜更香浓，不用额外多放油。 ​\n6. 胡萝卜别炒太久，保持微脆口感更爽口，也能保留更多营养。 ​\n7. 全程大火快炒，避免食材出水，口感更紧实。\n\n==========  菜谱 16  ==========\n\n# 挂面炒鸡蛋\n\n@分类：主食\n@时长：15分钟\n@份量：2人份\n@难度：简单\n@封面：c16\n\n### 食材\n挂面 150g、鸡蛋 3个、葱花 适量、蒜末 2瓣、青菜 少许、火腿丁 少许、生抽 1勺、老抽 半勺、盐 少许、白糖 少许、食用油 适量\n\n### 步骤\n1. 挂面煮至七八成熟（比包装说明少煮2分钟），捞出过凉水沥干，加少许食用油拌匀防粘连；\n2. 3个鸡蛋打散，锅中放多一点油，炒至蓬松盛出备用；\n3. 锅中留底油，放葱花、蒜末爆香（可选加青菜段、火腿丁），倒入挂面翻炒1分钟；\n4. 加1勺生抽、半勺老抽、少许盐和糖调味，倒入炒好的鸡蛋，快速翻匀出锅，撒葱花即可。 关键技巧\n5. 挂面过凉水+拌油，炒时不坨；鸡蛋提前炒好再回锅，口感更嫩。\n6. 调味可灵活调整，加少许蚝油提鲜或小米辣增辣都合适。\n\n==========  菜谱 17  ==========\n\n# 藕片炒肉\n\n@分类：家常菜\n@时长：15分钟\n@份量：2人份\n@难度：简单\n@封面：c17\n\n### 食材\n藕片炒肉（脆嫩入味版）、食材（2人份）：脆藕1节、猪里脊肉/梅花肉 200g、青椒 1个、蒜 3瓣、生抽 2勺、料酒 1勺、淀粉 1小勺、盐 少许、白糖半勺（提鲜）。\n\n### 步骤\n1. 肉切薄片，加料酒、1勺生抽、淀粉抓匀，腌制10分钟（锁水更嫩）；藕去皮切薄片，泡清水中加少许白醋（防氧化发黑，保持脆感）。 ​\n2. 热锅冷油，放肉片滑炒至变色，盛出备用；锅中留底油，爆香蒜末、青椒片。 ​\n3. 倒入藕片大火快炒2分钟（别炒久，否则变软），加1勺生抽、白糖、少许盐调味。 ​\n4. 倒回炒好的肉片，快速翻匀10秒，关火出锅。 关键技巧：选藕时挑表皮光滑、藕孔细小的（脆藕），炒的全程用大火，盐后放可减少藕片出水。\n\n==========  菜谱 18  ==========\n\n# 葱煎蛋\n\n@分类：家常菜\n@时长：10分钟\n@份量：2人份\n@难度：简单\n@封面：c18\n\n### 食材\n家常葱煎蛋（简洁版）、核心秘诀：热锅倒油防粘、中小火慢煎锁嫩、食材（2人份）、主料：鸡蛋 3个、香葱2根（切葱花）、调料：盐 1小勺、食用油 2勺、白胡椒粉少许（可选）\n\n### 步骤\n1. 鸡蛋打入碗中，加葱花、盐、白胡椒粉，搅打至蛋液起泡。\n2. 平底锅烧至微冒烟，倒油晃匀锅底。\n3. 转中小火倒蛋液，底部凝固后轻推边缘防粘；双面煎就翻面再煎1分钟，溏心蛋单面煎1.5分钟关火焖10秒。 关键技巧\n4. 先炸葱白再倒蛋液，香味更浓。\n5. 全程中小火，避免外焦里生。\n6. 撒芝麻或淋1滴生抽，风味更足。 需要我帮你整理葱煎蛋的创意搭配\n\n==========  菜谱 19  ==========\n\n# 花菜炒肉\n\n@分类：家常菜\n@时长：15分钟\n@份量：2人份\n@难度：简单\n@封面：c19\n\n### 食材\n花菜 半个、猪肉200g（五花肉/前腿肉都行、五花肉更香）、蒜 3瓣、干辣椒2个（可选）、腌肉料：生抽 1勺、料酒 半勺、淀粉 半勺、食用油 少许、调味：生抽 1勺、蚝油 半勺、盐 少许\n\n### 步骤\n1. 处理花菜 花菜掰成小朵，清水里加一小勺盐浸泡10分钟，冲干净。 锅里烧水，水开放花菜焯水60秒，捞出沥干。（焯水可以缩短炒制时间，花菜熟得均匀，不夹生；不想焯水就多炒一会儿） ​\n2. 腌肉（肉嫩入味关键） 肉切薄片，加腌肉料抓匀，腌10分钟。加一点油锁住水分，炒出来不会粘在一起。 ​\n3. 开炒 热锅少油，下入肉片，中火滑炒至变色，立刻盛出来备用。 同一口锅补少许油，下蒜末、干辣椒爆香，倒入花菜大火翻炒1分钟。 倒回肉片，放生抽、蚝油，大火快速翻炒均匀。 尝味道，酌情补一点点盐，翻炒几下直接出锅。 小要点\n4. 喜欢焦香口感：花菜不焯水，大火干煸到表面微微焦黄再放肉，更香。 ​\n5. 不要加水焖太久，花菜出水变软就失去脆感。 ​\n6. 口味可选：想吃带点辣味，可以加一勺豆瓣酱，爆香后再下花菜。\n\n==========  菜谱 20  ==========\n\n# 湖南辣椒炒肉\n\n@分类：家常菜\n@时长：20分钟\n@份量：2人份\n@难度：简单\n@封面：c20\n\n### 食材\n核心要点：带肥前腿肉、干煸辣椒、大火快炒、豆豉提香、不勾芡、食材（2人份）、主料：猪前腿肉250g（优先选肥瘦相间！肥肉单独切薄片、瘦肉切片、逆着肉纹切、3mm厚度最佳、梅花肉/五花肉也能替代）、​、辣椒：青椒、彩椒（就是你刚才切好的这一份、斜滚刀切块、螺丝椒最佳）、辅料：大蒜4瓣（拍碎！不要切末）、豆豉一小撮（灵魂！没有可以省略）、调味：生抽 1.5勺、蚝油 半勺、老抽几滴（仅上色、千万别多）、盐 少许、白糖小半勺（提鲜）、料酒 半勺\n\n### 步骤\n1. 瘦肉简单腌制（5分钟就行，不用久腌） 瘦肉片加：半勺料酒+几滴老抽+半勺蚝油，抓匀放一旁。 ❗不要放淀粉，正宗湖南辣椒炒肉不挂浆，吃的是肉香。\n2. 干煸辣椒（最关键一步！出虎皮、释放椒香） 锅烧烫，不放油，直接下青红椒，中火，锅铲用力按压辣椒，反复翻炒。 炒到辣椒变软、表皮起皱，出现一点点焦黄色虎皮，撒一点点盐入底味，盛出来备用。\n3. 煸肥肉，炼出猪油（香味来源） 锅不用洗，放少许菜籽油（猪油更香），下肥肉片中小火煸炒，一直炒到肥肉卷曲、出油，变成半透明油渣。 油太多就舀出来一部分，油多会腻。\n4. 炒瘦肉 下入腌好的瘦肉，大火快速滑散，肉片一变色马上放入拍蒜+豆豉，翻炒10秒炒出豉香蒜香。\n5. 混合辣椒+调味出锅 倒入之前煸好的辣椒，放生抽、小半勺白糖，全程大火快速翻炒30~60秒，尝咸淡，缺盐补一点点盐。 沿锅边喷一点点料酒，听到“滋啦”响，锅气直接拉满，立刻关火装盘！ 💡避坑重点（湖南家常关键点）\n6. 火候必须大火，全程快炒，炒久肉直接变老发柴； ​\n7. 老抽只能几滴，加多发黑发苦； ​\n8. 辣椒先干锅煸，这一步不能省，不然只有生辣椒味，没有焦香； ​\n9. 豆豉是灵魂，少量即可，不要放多，不然会发苦； ​\n10. 不加水、不勾芡！这道菜吃干香油润的锅气。 备选简易版本（家里火不大，不容易爆炒） 辣椒不用干煸。肥肉煸出油后，下瘦肉炒至变色，放蒜豆豉，直接倒入青红椒，大火炒到辣椒断生，再调味出锅。味道稍弱，但简单省事。\n\n==========  菜谱 21  ==========\n\n# 家常辣椒炒肉\n\n@分类：家常菜\n@时长：15分钟\n@份量：2人份\n@难度：简单\n@封面：c21\n\n### 食材\n家常辣椒炒肉（简洁版）、核心秘诀：肉片腌制锁水、大火快炒保脆嫩、食材（2人份）、主料：带肥猪肉 250克、线椒/杭椒 300克、蒜 3瓣、姜 2片、调料：生抽 2勺、老抽 半勺、料酒 1勺、淀粉 1小勺、盐 少许、白糖 半勺、食用油 2勺\n\n### 步骤\n1. 猪肉逆纹切薄片，加料酒、生抽、淀粉、半勺食用油抓匀，腌制10分钟。\n2. 少油热锅，下辣椒大火炒2分钟至起皱，加盐调味盛出。\n3. 倒油爆香姜蒜，下肉片大火滑炒1.5分钟至变色出油。\n4. 倒回辣椒，加生抽、老抽、白糖，大火快炒30秒，滴香醋提香即可出锅。 关键技巧\n5. 选肥瘦相间的肉，炒出油脂更香。\n6. 全程大火快炒，总时长不超5分钟。\n7. 辣椒先加盐调味，避免整体过咸。 需要我帮你整理辣椒炒肉的食材分量换算表，方便你按人数调整用量吗\n\n==========  菜谱 22  ==========\n\n# 苤蓝片炒肉\n\n@分类：家常菜\n@时长：15分钟\n@份量：2人份\n@难度：简单\n@封面：c22\n\n### 食材\n苤蓝片炒肉炒大蒜叶（简化家常版）、食材（2人份）、主料：苤蓝1个（去皮后约 300g、切薄片）、猪肉150g（肥瘦相间、大蒜叶1小把（切段、蒜白蒜叶分开）、​、辅料：生姜 2片、盐 1小勺、生抽 1勺、料酒 1勺、淀粉 少许、食用油 2勺、做法（10分钟搞定）\n\n### 步骤\n1. 猪肉片加1勺料酒、少许淀粉抓匀，腌制5分钟（锁水不柴）；苤蓝片用清水淘洗2遍，沥干备用。 ​\n2. 热锅倒油，放姜片爆香，倒入腌好的猪肉片，大火快速滑炒至变色，盛出备用。 ​\n3. 同一口锅留底油，放入蒜白段翻炒10秒，倒入苤蓝片，大火翻炒1分钟至断生。 ​\n4. 倒回炒好的猪肉片，加1勺生抽、1小勺盐，翻炒均匀后，放入蒜叶段，再大火翻30秒即可出锅。 关键小贴士\n\n==========  菜谱 23  ==========\n\n# 蛋炒饭\n\n@分类：主食\n@时长：10分钟\n@份量：2人份\n@难度：简单\n@封面：c23\n\n### 食材\n米饭 2碗、鸡蛋 2个、葱花 适量、生抽 1勺、盐 适量、白胡椒粉 少许、食用油 适量\n\n### 步骤\n1. 热锅倒油，中小火倒入蛋液，快速炒成细碎蛋花，盛出备用。 ​\n2. 同一口锅补少许油，大火烧热，倒入米饭，翻炒1分钟至松散（用锅铲打散结块）。 ​\n3. 加配菜翻炒30秒，淋生抽1勺，炒匀后倒入蛋碎，轻轻翻拌（别弄碎蛋花）。 ​\n4. 加盐、白胡椒粉调味，大火翻10秒，撒葱花出锅。\n\n> 小贴士：全程大火，迅速翻炒。\n\n==========  菜谱 24  ==========\n\n# 手撕包菜\n\n@分类：家常菜\n@时长：10分钟\n@份量：2人份\n@难度：简单\n@封面：c24\n\n### 食材\n清爽版手撕包菜（精简总结）、核心： 手撕去梗、大火快炒、醋分两次放、食材（2人份）、包菜 500g、蒜 5瓣、干辣椒3- 5个、花椒1小把、生抽 2勺、香醋 1.5勺、白糖 半勺、盐 少许、油2- 3勺、步骤（5步速做）\n\n### 步骤\n1. 包菜手撕去梗，洗净擦干\n2. 调汁：生抽+1勺香醋+白糖+盐搅匀\n3. 冷锅热油，小火炸香花椒捞出，炒香蒜片+干辣椒\n4. 转大火，倒入包菜快炒30秒-1分钟（脆软状态）\n5. 淋料汁翻匀，再淋0.5勺香醋，翻炒10秒出锅\n\n> 小贴士：包菜做的时候，葱和蒜油不要太热，不然一下就炒糊，炒包菜的时候要快速翻炒。一定要快速翻炒，不然包菜可能会炒黑。\n\n==========  菜谱 25  ==========\n\n# 小米辣炒肉\n\n@分类：家常菜\n@时长：15分钟\n@份量：2人份\n@难度：简单\n@封面：c25\n\n### 食材\n小米辣炒肉（家常鲜辣版）、核心关键：肉片提前腌制锁嫩、全程大火快炒、小米辣爆香不煮烂。、一、食材（2-3人份）、主料：猪肉300g（前腿肉/梅花肉最佳、里脊需多1勺油）、小米辣8-12根（切圈、按辣度调）、辅料：青椒2根（切条）、蒜3瓣（切片）、姜2片（切丝）、葱花 少许、调料：生抽 2勺、蚝油 1勺、料酒 1勺、盐 少许、白糖 半勺、淀粉 1勺、食用油 适量、二、步骤（10分钟）\n\n### 步骤\n1. 猪肉逆纹切薄片，加1勺料酒、1勺生抽、半勺淀粉、少许油抓匀，腌制10分钟。\n2. 备齐辅料，调碗汁：1勺生抽+1勺蚝油+半勺白糖+少许盐+2勺清水搅匀。\n3. 锅热油，倒入肉片大火滑炒30秒变色盛出；留底油，爆香姜蒜，加小米辣、青椒炒1分钟。\n4. 倒回肉片，淋碗汁快炒20秒裹匀酱汁，撒葱花出锅。 三、小贴士\n5. 肉片锁嫩：淀粉/蛋清二选一，腌制≥8分钟。\n6. 全程大火快炒，总时长≤5分钟，避免食材变柴出水。\n7. 辣度调整：微辣用小米辣+线椒1:1；特辣加2根小米辣泡椒增香。\n\n==========  菜谱 26  ==========\n\n# 打散版煎蛋\n\n@分类：家常菜\n@时长：5分钟\n@份量：2人份\n@难度：简单\n@封面：c26\n\n### 食材\n鸡蛋 2个、食用油 1勺、盐 少许、黑胡椒 少许、葱花 少许\n\n### 步骤\n1. 鸡蛋打入碗中，加少许盐用筷子充分打散，打到蛋液起泡，口感更蓬松。\n2. 平底锅烧至微热倒油，转动锅让油铺满锅底，油面微微冒小泡即可。\n3. 倒入蛋液，小火慢煎约 1 分钟，待底部定型后用铲子从边缘向中间推。\n4. 翻面再煎 30 秒，喜欢溏心就少煎 10 秒，出锅前撒黑胡椒、葱花。\n\n> 小贴士：油别太多，全程小火防糊；打散时加 1 勺清水或牛奶，煎出来更软嫩。\n\n==========  菜谱 27  ==========\n\n# 白菜炒蛋\n\n@分类：家常菜\n@时长：10分钟\n@份量：2人份\n@难度：简单\n@封面：c27\n\n### 食材\n小白菜 300g、鸡蛋 3个、大蒜 2瓣、盐 适量、食用油 适量\n\n### 步骤\n1. 小白菜洗净从中间切一刀，菜梗和菜叶分开；鸡蛋加少许温水打散，大蒜切片。\n2. 热锅倒油，中火倒入蛋液快速滑炒至定型呈嫩黄色，盛出备用。\n3. 锅中补少许油，爆香蒜片，先下菜梗炒 1 分钟变软，再下菜叶大火炒 30 秒至断生。\n4. 倒回炒蛋，加盐快速翻匀即可出锅。\n\n> 小贴士：青菜别炒太久，保持脆嫩；喜欢辣可在爆蒜时加 1 根小米辣。\n\n==========  菜谱 28  ==========\n\n# 火腿炒鸡蛋\n\n@分类：家常菜\n@时长：8分钟\n@份量：2人份\n@难度：简单\n@封面：c28\n\n### 食材\n火腿 1根、鸡蛋 3个、葱花 少许、盐 少许、食用油 适量、生抽 少许\n\n### 步骤\n1. 火腿切约 0.3 厘米厚的薄片；鸡蛋加少许盐和 1 勺清水打散，炒出来更蓬松。\n2. 热锅倒油，倒入蛋液大火快速划散，定型蓬松后盛出备用。\n3. 锅中留底油，中小火下火腿片炒 1-2 分钟，炒出香味、表面微焦即可。\n4. 倒回鸡蛋翻匀，淋少许生抽提鲜，撒葱花炒两下出锅。\n\n> 小贴士：切片火腿不耐久炒，表面微焦就要停，炒久了口感发硬。\n\n==========  菜谱 29  ==========\n\n# 红糖姜茶\n\n@分类：汤羹\n@时长：15分钟\n@份量：2人份\n@难度：简单\n@封面：c29\n\n### 食材\n生姜 50g、红糖 40g、清水 800ml、红枣 3颗、枸杞 1小把\n\n### 步骤\n1. 生姜去皮切片或拍碎，拍碎更出味；红枣去核。\n2. 锅中加清水和姜片，大火煮沸后转小火煮 5 分钟。\n3. 放入红糖和红枣，搅拌至红糖融化，再煮 3 分钟。\n4. 最后放枸杞焖 1 分钟即可关火。\n\n> 小贴士：怕辣就减少姜量或煮好后滤掉姜片；凉饮需冷藏，2 天内喝完。\n\n==========  菜谱 30  ==========\n\n# 排骨玉米胡萝卜汤\n\n@分类：汤羹\n@时长：80分钟\n@份量：2人份\n@难度：简单\n@封面：c30\n\n### 食材\n排骨 500g、玉米 1根、胡萝卜 1根、枸杞 1小把、八角 2个、桂皮 1段、香叶 2片、大蒜 4瓣、大蒜叶 少许、盐 适量、食用油 少许\n\n### 步骤\n1. 排骨冷水浸泡 30 分钟泡出血水，捞出反复清洗 2-3 遍。\n2. 锅中放少许油，下排骨中小火煸炒 3-4 分钟至表面微黄。\n3. 放入八角、桂皮、香叶、大蒜、大蒜叶炒出香味，把排骨盛出。\n4. 另起锅烧足量开水，水开后放入排骨，撇去浮沫，小火煮 40 分钟。\n5. 放入切好的胡萝卜、玉米和枸杞，加盐调味，继续小火炖 30 分钟。\n6. 出锅前撒葱花，把热汤浇在葱花上烫香即可。\n\n> 小贴士：排骨先煸再炖，汤更香浓；水要一次加足，中途加水会冲淡味道。\n\n==========  菜谱 31  ==========\n\n# 电饭煲排骨糯米饭\n\n@分类：主食\n@时长：90分钟\n@份量：2人份\n@难度：简单\n@封面：c31\n\n### 食材\n排骨 300g、糯米 250g、干香菇 6朵、胡萝卜 半根、玉米 半根、葱姜 适量、生抽 2勺、老抽 1勺、蚝油 1勺、盐 半勺、白糖 半勺、料酒 1勺\n\n### 步骤\n1. 糯米淘洗后清水浸泡 2 小时以上，泡到用手能捏碎最香，时间紧至少泡 30 分钟。\n2. 排骨冷水下锅，加姜片、料酒煮开撇沫，捞出冲净。\n3. 锅里少油放葱姜爆香，下排骨炒到微黄，加生抽、老抽、蚝油、盐、白糖翻炒上色。\n4. 放入香菇、胡萝卜、玉米再炒 1 分钟。\n5. 泡好的糯米沥干铺进电饭煲，把排骨和配料铺在上面，加水刚好没过食材。\n6. 按煮饭键，跳键后焖 10 分钟，用饭勺把米饭和排骨拌匀，撒葱花。\n\n> 小贴士：水量比平时煮饭略少一点，糯米泡过已含水，水多会烂。\n\n==========  菜谱 32  ==========\n\n# 煎冷冻鸡胸肉\n\n@分类：家常菜\n@时长：15分钟\n@份量：2人份\n@难度：简单\n@封面：c32\n\n### 食材\n冷冻鸡胸肉 1块、盐 适量、黑胡椒 适量、食用油 适量、蒜末 少许、生抽 少许\n\n### 步骤\n1. 冷冻鸡胸不用完全化开，冲掉表面冰渣，用厨房纸彻底擦干，防油溅。\n2. 用刀背或肉锤把鸡胸拍薄，厚度均匀更容易熟。\n3. 两面撒盐、黑胡椒，抹一层薄油，静置 3 分钟。\n4. 锅烧热倒油，中小火放鸡胸煎 2-3 分钟至金黄定型，翻面再煎 2-3 分钟。\n5. 盖锅盖焖 3-4 分钟保证内部熟透，用筷子戳最厚处无血水即熟。\n6. 出锅静置 1 分钟后切片，可淋少许生抽加蒜末翻两下增香。\n\n> 小贴士：全程中小火，大火容易外焦里生；焖这步别省，冷冻肉靠它熟透。\n\n==========  菜谱 33  ==========\n\n# 香干炒肉\n\n@分类：家常菜\n@时长：20分钟\n@份量：2人份\n@难度：简单\n@封面：c33\n\n### 食材\n卤香干 200g、猪前腿肉 150g、青椒 2个、生抽 3勺、老抽 半勺、料酒 半勺、玉米淀粉 1小勺、白糖 1小勺、蒜末 3瓣、葱花 少许、食用油 适量、盐 少许\n\n### 步骤\n1. 猪肉逆纹切薄片，加 1 勺生抽、半勺料酒、1 小勺淀粉抓匀，再淋 1 勺油锁水，腌 10 分钟。\n2. 香干切 0.3 厘米薄片，青椒去籽切滚刀块，蒜切末。\n3. 热锅冷油，油温六成热下肉片快速滑炒至变色，约 1 分钟，盛出备用。\n4. 锅中留底油，下香干中小火煎至两面微黄、边缘发焦，约 2 分钟，盛出。\n5. 补少许油爆香蒜末，下青椒大火炒 1 分钟至表皮起皱。\n6. 倒入香干和肉片，淋调味汁（2 勺生抽、半勺老抽、1 小勺白糖），大火翻炒 30 秒，撒葱花出锅。\n\n> 小贴士：香干别频繁翻动，一面煎好再翻另一面才不碎；卤香干本身有咸味，盐要少放或不放。\n\n==========  菜谱 34  ==========\n\n# 黄金裹蛋炒饭\n\n@分类：主食\n@时长：15分钟\n@份量：2人份\n@难度：简单\n@封面：c34\n\n### 食材\n隔夜米饭 2碗、鸡蛋 3个、小葱 2根、火腿肠 1根、玉米粒 少许、盐 1小勺、白胡椒粉 少许、生抽 半勺\n\n### 步骤\n1. 隔夜米饭用勺子压散所有结块，确保粒粒分开；新鲜饭摊开吹干 10 分钟再用。\n2. 鸡蛋加 1 小勺盐、少许白胡椒粉搅匀，倒入米饭抓拌，让每粒米都裹上蛋液，静置 5 分钟。\n3. 火腿肠切小丁，小葱切葱花。\n4. 热锅冷油，倒入裹好蛋液的米饭，中小火慢炒 3-4 分钟，炒到粒粒分明、蛋液定型呈金黄。\n5. 加火腿丁、玉米粒翻炒 1 分钟，喜欢更鲜可淋半勺生抽。\n6. 撒葱花翻炒两下关火。\n\n> 小贴士：米饭一定要打散，结块裹不上蛋液会炒成一坨；全程中小火，大火容易糊锅底。\n\n==========  菜谱 35  ==========\n\n# 蒜蓉上海青\n\n@分类：家常菜\n@时长：8分钟\n@份量：2人份\n@难度：简单\n@封面：c35\n\n### 食材\n上海青 400g、大蒜 4瓣、盐 少许、食用油 适量\n\n### 步骤\n1. 上海青洗净，从中间对半切开，大的切四瓣，沥干水分。\n2. 大蒜切末，分成两半。\n3. 热锅冷油，放一半蒜末爆香，倒入上海青大火快炒 1-2 分钟。\n4. 菜叶变软、颜色变深绿时加剩下的蒜末和少许盐，翻炒均匀出锅。\n\n> 小贴士：蒜末分两次放，一半爆香、一半出锅前放，蒜香层次更足。\n\n==========  菜谱 36  ==========\n\n# 青椒炒腊牛肉\n\n@分类：家常菜\n@时长：25分钟\n@份量：2人份\n@难度：简单\n@封面：c36\n\n### 食材\n腊黄牛肉片 100g、青椒 3个、小米辣 2个、蒜片 4瓣、姜丝 少许、食用油 1勺、生抽 1小勺、鸡精 少许\n\n### 步骤\n1. 腊牛肉用温水浸泡 1-1.5 小时，中途换 1 次水，泡到用手指能轻松掐动，捞出沥干。\n2. 逆纹切 2-3 毫米薄片，太厚咬不动。\n3. 热锅冷油，下蒜片、姜丝、小米辣爆香 10 秒。\n4. 倒入腊牛肉大火快炒 1-2 分钟，炒到肉片微微卷曲、边缘焦黄，盛出备用。\n5. 用余油下青椒块，大火炒 30 秒至表皮起皱断生。\n6. 倒回牛肉，加 1 小勺生抽和少许鸡精，翻炒 10 秒出锅。\n\n> 小贴士：腊牛肉本身偏咸，生抽可省；泡水是关键，不泡直接炒会又硬又咸。\n\n==========  菜谱 37  ==========\n\n# 懒人丸子焖饭\n\n@分类：主食\n@时长：40分钟\n@份量：2人份\n@难度：简单\n@封面：c37\n\n### 食材\n大米 2杯、火锅丸子 200g、玉米 少许、青豆 少许、胡萝卜丁 少许、生抽 1勺、蚝油 半勺、盐 少许\n\n### 步骤\n1. 米淘干净，加水和平时煮饭一样多。\n2. 火锅丸子切半或切花刀，别整颗丢下去，更入味也熟得透。\n3. 把丸子、玉米、青豆、胡萝卜丁丢进米里，加生抽、蚝油和一点点盐搅匀。\n4. 按下煮饭键，跳闸后再焖 5 分钟，拌匀就能吃。\n\n> 小贴士：丸子切花刀更容易吸味；盐要少，蚝油和丸子本身都带咸。\n\n==========  菜谱 38  ==========\n\n# 电饭煲腊肉焖饭\n\n@分类：主食\n@时长：45分钟\n@份量：2人份\n@难度：简单\n@封面：c38\n\n### 食材\n大米 2杯、腊肉 150g、土豆 1个、胡萝卜 半根、香菇 3朵、生抽 1勺、老抽 半勺、蚝油 半勺\n\n### 步骤\n1. 米淘洗干净，按平时煮饭的水量加水。\n2. 腊肉切小丁，土豆、胡萝卜切丁，香菇切片。\n3. 所有食材铺在米上，淋上生抽、老抽、蚝油，不用搅拌。\n4. 按下煮饭键，跳键后焖 10 分钟，拌匀开吃。\n\n> 小贴士：铺好别搅，让蒸汽把调料渗下去；腊肉自带咸味，不用另外加盐。\n\n==========  菜谱 39  ==========\n\n# 辣椒炒卤脆骨\n\n@分类：家常菜\n@时长：15分钟\n@份量：2人份\n@难度：简单\n@封面：c39\n\n### 食材\n卤脆骨 250g、青椒 2根、小米辣 2个、姜蒜末 适量、葱花 少许、生抽 1勺、白糖 半勺、鸡精 少许、盐 少许、食用油 适量\n\n### 步骤\n1. 卤脆骨切成均匀细条，辣椒切斜段，姜蒜切末。\n2. 热锅放少许油，倒入脆骨中小火煸炒 1-2 分钟，把油脂和香味逼出来，盛出备用。\n3. 锅里留底油，爆香姜蒜末，下辣椒段大火炒至变软、表皮微皱。\n4. 倒入脆骨，加 1 勺生抽、少许盐、半勺白糖和鸡精，大火翻炒 1 分钟。\n5. 撒葱花炒匀出锅。\n\n> 小贴士：脆骨已经卤熟带咸味，盐要少放；全程大火快炒才保得住脆感。\n\n==========  菜谱 40  ==========\n\n# 面馆鲜汤底\n\n@分类：汤羹\n@时长：10分钟\n@份量：2人份\n@难度：简单\n@封面：c40\n\n### 食材\n葱花 1小把、紫菜 1撮、虾皮 少许、盐 半勺、白胡椒粉 少许、生抽 1勺、蚝油 半勺、猪油 1小勺、鸡精 少许\n\n### 步骤\n1. 碗里先放葱花、紫菜、虾皮、盐、白胡椒粉、生抽、蚝油、猪油和鸡精。\n2. 煮饺子或煮面的水烧开，先舀 2 勺滚烫的汤冲进碗里，把调料冲化开。\n3. 再把煮好的饺子或面条捞进碗里，搅一搅就能吃。\n\n> 小贴士：一定要加猪油，香味直接翻倍；紫菜加虾皮是鲜味关键，白胡椒粉一点点就够。\n\n==========  菜谱 41  ==========\n\n# 青椒炒豆皮\n\n@分类：家常菜\n@时长：15分钟\n@份量：2人份\n@难度：简单\n@封面：c41\n\n### 食材\n豆皮 200g、青椒 3个、蒜末 1勺、生抽 2勺、盐 少许、白糖 1小勺、葱花 少许、食用油 适量\n\n### 步骤\n1. 豆皮洗净切宽条，青椒去籽切丝。\n2. 豆皮放入沸水焯 1-2 分钟，捞出沥干，去掉豆腥味、口感更软嫩。\n3. 热锅冷油，放蒜末爆香，闻到明显蒜香即可，别炒焦。\n4. 下青椒丝大火快炒 30 秒至断生。\n5. 倒入豆皮大火翻炒 1 分钟，加 2 勺生抽、少许盐、1 小勺白糖炒匀，撒葱花出锅。\n\n> 小贴士：焯豆皮时水里加少许盐和油，颜色更亮口感更滑；喜欢重口可加 1 勺豆瓣酱。\n";
+
+</script>
+<script>
+/**
+ * 菜谱文本解析器
+ * 把用户粘贴的自由格式文本（Markdown / 纯文本）解析成结构化菜谱。
+ * 同时提供反向序列化，用于"编辑已有菜谱"时回填文本框。
+ *
+ * 浏览器：window.RecipeParser
+ * Node：  module.exports
+ */
+(function (root, factory) {
+  const api = factory();
+  if (typeof module === 'object' && module.exports) module.exports = api;
+  else root.RecipeParser = api;
+})(typeof self !== 'undefined' ? self : this, function () {
+  'use strict';
+
+  // 计量单位（长单位在前，避免 "小勺" 被 "勺" 抢先匹配）
+  const UNIT = [
+    '千克', '公斤', '毫升', '汤匙', '茶匙', '小勺', '大勺', '小碗', '大碗',
+    'kg', 'ml', 'mL', 'KG', 'ML', '克', '升', '斤', '两', 'g', 'L',
+    '勺', '个', '颗', '瓣', '片', '根', '只', '条', '块', '把', '碗', '杯',
+    '段', '张', '粒', '朵', '撮', '滴', '寸', 'oz', 'lb',
+  ];
+
+  const AMOUNT_WORDS = ['适量', '少许', '少量', '若干', '随意', '可选', '按需', '一点点', '一点'];
+
+  const CN_NUM = '０-９0-9一二三四五六七八九十百半两几';
+
+  const RE_TRAILING_QTY = new RegExp(
+    '^(.+?)[\\s:：]*(' +
+      `[${CN_NUM}]+(?:\\.\\d+)?\\s*(?:${UNIT.join('|')})` +
+      '|' + AMOUNT_WORDS.join('|') +
+    ')$'
+  );
+  const RE_LEADING_QTY = new RegExp('^(' + AMOUNT_WORDS.join('|') + ')(.+)$');
+  const RE_NUM_START = /^[0-9０-９][0-9０-９.]*\s*.*$/;
+
+  const ING_WORDS = '食材|用料|材料|原料|主料|配料|辅料|调料|所需材料|准备材料|食材清单|用料清单';
+  const STEP_WORDS = '步骤|做法|烹饪步骤|制作步骤|制作方法|烹饪方法|操作步骤|流程|方法|详细步骤';
+  const TIP_WORDS = '小贴士|贴士|提示|注意|注意点|tips?|备注|心得';
+  const NAME_WORDS = '菜名|名称|菜品|标题';
+
+  const RE_ING_HEAD = new RegExp(`^(${ING_WORDS})[：:]?$`);
+  const RE_STEP_HEAD = new RegExp(`^(${STEP_WORDS})[：:]?$`);
+  const RE_TIP_HEAD = new RegExp(`^(${TIP_WORDS})[：:]?`, 'i');
+  const RE_ING_INLINE = new RegExp(`^(${ING_WORDS})[：:]\\s*(.+)$`);
+  const RE_STEP_INLINE = new RegExp(`^(${STEP_WORDS})[：:]\\s*(.+)$`);
+  const RE_NAME_INLINE = new RegExp(`^(${NAME_WORDS})[：:]\\s*(.+)$`);
+  // 模型有时把模板里的「# 菜名」原样输出，这种标题不是真菜名
+  const RE_PLACEHOLDER_NAME = /^(菜名|名称|菜品|菜品名|菜谱名|食谱名|标题)$/;
+
+  // 明确是编号列表（数字 / 圆圈数字），任何语境下都视为步骤
+  const STEP_NUM_STRICT = /^\s*(?:\(?\d{1,2}\)?[.、)．]|[①-⑩]|\d{1,2}\s*[.、])\s*/;
+  // 项目符号，仅在步骤语境下视为步骤标记
+  const STEP_BULLET = /^\s*[-*•·]\s+/;
+
+  const ING_SPLIT = /[、，,；;]+/;
+
+  /** 去掉 Markdown 标记，保留文字 */
+  // 导出 TXT 用的中文名（和 Kotlin 端 RecipeCategory.textOf / Difficulty.textOf 对齐）
+  const CAT_TEXT = {
+    home: '家常菜', soup: '汤羹', staple: '主食',
+    cold: '凉菜', dessert: '甜点', other: '其他',
+  };
+  const CAT_BY_TEXT = {
+    '家常菜': 'home', '汤羹': 'soup', '汤': 'soup', '主食': 'staple',
+    '凉菜': 'cold', '甜点': 'dessert', '甜品': 'dessert', '其他': 'other',
+  };
+  const DIFF_TEXT = ['简单', '中等', '有点难'];
+
+  function stripMd(s) {
+    return String(s || '')
+      .replace(/\*\*(.+?)\*\*/g, '$1')
+      .replace(/__(.+?)__/g, '$1')
+      .replace(/(^|[^*])\*(?!\s)(.+?)(?<!\s)\*/g, '$1$2')
+      .replace(/`([^`]+)`/g, '$1')
+      .replace(/~~(.+?)~~/g, '$1')
+      .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  /** 单个食材 → {n, a} */
+  function splitIngredient(raw) {
+    let s = stripMd(raw).replace(/^[-*•·\s]+/, '').trim();
+    s = s.replace(/^[：:]\s*/, '');
+    if (!s) return null;
+
+    // 量词在前：少许白糖
+    const lead = s.match(RE_LEADING_QTY);
+    if (lead && lead[2].trim()) {
+      return { n: lead[2].trim(), a: lead[1] };
+    }
+
+    // 名称 + 末尾用量
+    const tail = s.match(RE_TRAILING_QTY);
+    if (tail && tail[1].trim()) {
+      return { n: tail[1].trim(), a: tail[2].trim() };
+    }
+
+    // 空格分隔、后半以数字开头：鸡蛋 2个
+    const parts = s.split(/\s+/);
+    if (parts.length >= 2) {
+      const last = parts[parts.length - 1];
+      if (RE_NUM_START.test(last)) {
+        return { n: parts.slice(0, -1).join(' '), a: last };
+      }
+    }
+
+    return { n: s, a: '' };
+  }
+
+  /** 一行食材文本 → 数组 */
+  function parseIngredientLine(line) {
+    const out = [];
+    stripMd(line)
+      .replace(/^[-*•·]\s+/, '')
+      .split(ING_SPLIT)
+      .forEach((seg) => {
+        const item = splitIngredient(seg);
+        if (item && (item.n || item.a)) out.push(item);
+      });
+    return out;
+  }
+
+  /** 根据菜名与食材猜分类 */
+  function guessCategory(name, ingredients) {
+    const t = (String(name || '') + ' ' + (ingredients || []).map((i) => i.n).join(' ')).toLowerCase();
+    if (/(汤|羹|煲|锅仔|炖盅)/.test(t)) return 'soup';
+    if (/(凉拌|拌菜|沙拉|冷盘|口水)/.test(t)) return 'cold';
+    if (/(蛋糕|布丁|甜品|糖水|饼干|派|酥|奶冻|慕斯|双皮奶)/.test(t)) return 'dessert';
+    if (/(炒饭|拌饭|焖饭|盖饭|面条|拉面|炒面|汤面|米粉|河粉|粥|饺子|包子|馒头|花卷|烙饼|煎饼|年糕|意面|披萨)/.test(t)) return 'staple';
+    return 'home';
+  }
+
+  /**
+   * 主解析入口
+   * @returns {{name, ingredients, steps, tips, category, ok, hints}}
+   */
+  function parseRecipe(text) {
+    const result = {
+      name: '', ingredients: [], steps: [], tips: '',
+      category: 'home', ok: false, hints: [],
+    };
+    const rawText = String(text || '').replace(/\r\n?/g, '\n');
+    if (!rawText.trim()) return result;
+
+    const lines = rawText.split('\n');
+    let mode = 'name'; // name | ing | step | tip | awaitName
+    let nameFound = false;
+    const tipLines = [];
+    const stepBuffer = [];
+    const meta = {};
+
+    for (let i = 0; i < lines.length; i++) {
+      const rawLine = lines[i];
+      if (!rawLine.trim()) continue;
+
+      const isQuote = /^\s*>/.test(rawLine);
+      const plain = stripMd(rawLine.replace(/^\s*>\s?/, ''));
+      if (!plain) continue;
+
+      // ---- 0. 导出文件带的元信息：@分类：家常菜 / @时长：45分钟
+      if (plain.startsWith('@')) {
+        readMetaLine(plain, meta);
+        continue;
+      }
+
+      // ---- 1. 贴士（优先级最高，"小贴士："开头的行不进正文）
+      if (RE_TIP_HEAD.test(plain)) {
+        const body = plain.replace(new RegExp(`^(${TIP_WORDS})[：:]?`, 'i'), '').trim();
+        if (body) tipLines.push(body);
+        mode = 'tip';
+        continue;
+      }
+
+      // ---- 2. Markdown 标题
+      const h = rawLine.match(/^\s*(#{1,6})\s+(.*)$/);
+      if (h) {
+        const title = stripMd(h[2]);
+        if (RE_ING_HEAD.test(title)) { mode = 'ing'; continue; }
+        if (RE_STEP_HEAD.test(title)) { mode = 'step'; continue; }
+        if (!nameFound) {
+          nameFound = true;
+          if (RE_PLACEHOLDER_NAME.test(title.trim())) {
+            // 等下一行的真实菜名
+            mode = 'awaitName';
+          } else {
+            result.name = title;
+            mode = 'ing';
+          }
+        } else {
+          mode = 'ing';
+        }
+        continue;
+      }
+
+      // ---- 3. 前缀式：菜名：xxx
+      const mName = plain.match(RE_NAME_INLINE);
+      if (mName) {
+        result.name = mName[2].trim();
+        nameFound = true;
+        mode = 'ing';
+        continue;
+      }
+
+      // ---- 4. 前缀式：食材：xxx
+      const mIng = plain.match(RE_ING_INLINE);
+      if (mIng) {
+        mode = 'ing';
+        parseIngredientLine(mIng[2]).forEach((it) => result.ingredients.push(it));
+        continue;
+      }
+
+      // ---- 5. 前缀式：步骤：xxx
+      const mStep = plain.match(RE_STEP_INLINE);
+      if (mStep) {
+        mode = 'step';
+        stepBuffer.push(mStep[2]);
+        continue;
+      }
+
+      // ---- 6. 纯文本段落标题（食材 / 步骤 / 小贴士 独占一行）
+      if (RE_ING_HEAD.test(plain)) { mode = 'ing'; continue; }
+      if (RE_STEP_HEAD.test(plain)) { mode = 'step'; continue; }
+
+      // ---- 7. 引用行
+      if (isQuote) {
+        if (plain) tipLines.push(plain);
+        continue;
+      }
+
+      // ---- 8. 首个非空行兜底当菜名
+      if (!nameFound && mode === 'name') {
+        const first = plain.replace(/^[#\s]+/, '').trim();
+        nameFound = true;
+        if (RE_PLACEHOLDER_NAME.test(first)) {
+          mode = 'awaitName';
+        } else {
+          result.name = first;
+          mode = 'ing';
+        }
+        continue;
+      }
+
+      // 7.5 上一行是「# 菜名」这类占位标题，用这一行的内容当真实菜名
+      if (mode === 'awaitName') {
+        const real = plain.replace(/^[#\s]+/, '').trim();
+        if (real && !RE_ING_HEAD.test(real) && !RE_STEP_HEAD.test(real)) {
+          result.name = real;
+          mode = 'ing';
+          continue;
+        }
+      }
+
+      // ---- 9. 编号行 → 切到步骤（食材区里出现 1. 2. 说明步骤开始了）
+      if (mode !== 'step' && STEP_NUM_STRICT.test(rawLine)) {
+        mode = 'step';
+        stepBuffer.push(rawLine);
+        continue;
+      }
+
+      // ---- 10. 按当前模式归集
+      if (mode === 'ing') {
+        parseIngredientLine(rawLine).forEach((it) => result.ingredients.push(it));
+      } else if (mode === 'step') {
+        stepBuffer.push(rawLine);
+      } else if (mode === 'tip') {
+        tipLines.push(plain);
+      } else {
+        parseIngredientLine(rawLine).forEach((it) => result.ingredients.push(it));
+      }
+    }
+
+    // 合并步骤：编号行开新步骤，未编号行并入上一步
+    let current = '';
+    const flush = () => {
+      const t = stripMd(current).trim();
+      if (t) result.steps.push(t);
+      current = '';
+    };
+    for (const line of stepBuffer) {
+      const numbered = STEP_NUM_STRICT.test(line) || STEP_BULLET.test(line);
+      const cleaned = line
+        .replace(STEP_NUM_STRICT, '')
+        .replace(STEP_BULLET, '')
+        .trim();
+      if (!cleaned) continue;
+      if (numbered) {
+        flush();
+        current = cleaned;
+      } else if (!current) {
+        current = cleaned;
+      } else {
+        current += ' ' + cleaned;
+      }
+    }
+    flush();
+
+    result.tips = tipLines.filter(Boolean).join(' ');
+
+    // 归一化
+    if (result.name) {
+      result.name = result.name.replace(/^[《【\[]+|[》】\]]+$/g, '').trim();
+    }
+    result.ingredients = dedupeIngredients(result.ingredients);
+
+    // 导出文件里带了元信息就用它，否则按菜名猜分类
+    result.category = CAT_BY_TEXT[(meta['分类'] || '').trim()] ||
+      guessCategory(result.name, result.ingredients);
+    result.minutes = firstInt(meta['时长']) ?? 0;
+    result.servings = firstInt(meta['份量']) ?? 2;
+    result.difficulty = parseDifficulty(meta['难度']);
+
+    if (!result.name) result.hints.push('没识别到菜名，可在第一行写 # 菜名');
+    if (!result.ingredients.length) result.hints.push('没识别到食材，检查是否有「### 食材」小标题');
+    if (!result.steps.length) result.hints.push('没识别到步骤，检查是否有「### 步骤」小标题');
+
+    result.ok = !!result.name && (result.ingredients.length > 0 || result.steps.length > 0);
+    return result;
+  }
+
+  /** 读取一行 `@键：值` */
+  function readMetaLine(line, out) {
+    const body = line.replace(/^@/, '').trim();
+    const m = body.match(/^([^：:]+)[：:]\s*(.+)$/);
+    if (m && m[1].trim() && m[2].trim()) out[m[1].trim()] = m[2].trim();
+  }
+
+  function firstInt(text) {
+    const m = String(text || '').match(/\d+/);
+    return m ? Number(m[0]) : null;
+  }
+
+  function parseDifficulty(text) {
+    const t = String(text || '').trim();
+    if (t.includes('难')) return 3;
+    if (t.includes('中')) return 2;
+    return 1;
+  }
+
+  /** 去重（同名食材只留第一次出现的用量） */
+  function dedupeIngredients(list) {
+    const seen = new Set();
+    const out = [];
+    for (const it of list) {
+      const key = (it.n || '').trim();
+      if (!key) {
+        if (it.a) out.push(it);
+        continue;
+      }
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push(it);
+    }
+    return out;
+  }
+
+  /** 菜谱 → 文本（编辑时回填） */
+  function stringifyRecipe(recipe) {
+    const ings = (recipe.ingredients || [])
+      .filter((i) => i.n || i.a)
+      .map((i) => (i.a ? `${i.n} ${i.a}` : i.n))
+      .join('、');
+
+    const steps = (recipe.steps || [])
+      .filter((s) => s && s.trim())
+      .map((s, i) => `${i + 1}. ${s}`)
+      .join('\n');
+
+    const parts = [`# ${recipe.name || '未命名菜谱'}`, ''];
+
+    // 元信息：导出 TXT 时带上，导入到另一台手机才能还原分类与份量
+    parts.push(`@分类：${CAT_TEXT[recipe.category] || '其他'}`);
+    if (Number(recipe.minutes) > 0) parts.push(`@时长：${Number(recipe.minutes)}分钟`);
+    if (Number(recipe.servings) > 0) parts.push(`@份量：${Number(recipe.servings)}人份`);
+    parts.push(`@难度：${DIFF_TEXT[(Number(recipe.difficulty) || 1) - 1] || '简单'}`);
+
+    parts.push('', '### 食材', ings, '', '### 步骤', steps);
+
+    if (recipe.description && recipe.description.trim()) {
+      parts.push('', `> 小贴士：${recipe.description.trim()}`);
+    }
+    return parts.join('\n');
+  }
+
+  /** 分隔行：4 个以上等号独占一行，菜谱正文里基本不会出现 */
+  const RE_SPLIT = /^={4,}.*$/m;
+
+  /** 多道菜谱 → 一个 TXT */
+  function exportAll(recipes) {
+    if (!recipes || !recipes.length) return '';
+    return recipes
+      .map((r, i) => `==========  菜谱 ${i + 1}  ==========\n\n${stringifyRecipe(r)}`)
+      .join('\n\n');
+  }
+
+  /** TXT → 若干段落 */
+  function splitBlocks(text) {
+    return String(text || '')
+      .replace(/\r\n?/g, '\n')
+      .split(RE_SPLIT)
+      .map((x) => x.trim())
+      .filter(Boolean);
+  }
+
+  /** 建议的导出文件名 */
+  function suggestFileName(d = new Date()) {
+    const p = (n) => String(n).padStart(2, '0');
+    const stamp = `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}-` +
+      `${p(d.getHours())}${p(d.getMinutes())}`;
+    return `我的菜谱-${stamp}.txt`;
+  }
+
+  return {
+    parseRecipe, stringifyRecipe, splitIngredient, stripMd, guessCategory,
+    exportAll, splitBlocks, suggestFileName,
+  };
+});
+
+</script>
+<script>
+/* 放松小游戏 · 与菜谱 App 内置的五个小游戏
+   纯 Canvas 实现，无外部依赖。接口约定：
+
+     const game = Games.create(key, canvas)
+     game.resize(w, h)       // 画布尺寸变化
+     game.update(dt)         // dt 毫秒
+     game.render(ctx)
+     game.input(action)      // up / down / left / right / a / b
+     game.state              // { score, over, paused, label }
+
+   每个游戏自己管状态，宿主只负责循环、计分板和按键。
+*/
+(function (root) {
+  'use strict';
+
+  const C = {
+    // 街机暗色主题：与 Android 端 GameStyle 一致
+    bg: '#17130F',
+    grid: '#352C23',
+    ink: '#F3E9DC',
+    sub: '#8A7A6C',
+    brand: '#E2571E',
+    brand2: '#F08A4B',
+    soft: '#F6E0CE',
+    good: '#3E9A5C',
+    warn: '#F2A03D',
+    white: '#FFFFFF',
+    darkPanel: '#241E18',
+    light: '#F3E9DC',
+    red: '#E9536F',
+  };
+
+  const rnd = (n) => Math.floor(Math.random() * n);
+  const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
+
+  // 圆角矩形（部分浏览器没有 roundRect）
+  function rr(ctx, x, y, w, h, r) {
+    const rad = Math.min(r, w / 2, h / 2);
+    ctx.beginPath();
+    ctx.moveTo(x + rad, y);
+    ctx.arcTo(x + w, y, x + w, y + h, rad);
+    ctx.arcTo(x + w, y + h, x, y + h, rad);
+    ctx.arcTo(x, y + h, x, y, rad);
+    ctx.arcTo(x, y, x + w, y, rad);
+    ctx.closePath();
+  }
+
+  function fillRR(ctx, x, y, w, h, r, color) {
+    ctx.fillStyle = color;
+    rr(ctx, x, y, w, h, r);
+    ctx.fill();
+  }
+
+  function text(ctx, str, x, y, size, color, align, weight) {
+    ctx.fillStyle = color || C.ink;
+    ctx.font = `${weight || 600} ${size}px -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif`;
+    ctx.textAlign = align || 'left';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(str, x, y);
+  }
+
+  /* ================================================================
+     1. 贪吃蛇
+     ================================================================ */
+  function Snake() {
+    const COLS = 15;
+    const ROWS = 22;
+    let cell = 16;
+    const state = { score: 0, over: false, paused: false, label: '', events: [] };
+
+    let snake, dir, nextDir, food, acc, stepMs, alive, started;
+
+    function reset() {
+      snake = [{ x: 7, y: 11 }, { x: 7, y: 12 }, { x: 7, y: 13 }];
+      dir = { x: 0, y: -1 };
+      nextDir = { x: 0, y: -1 };
+      acc = 0;
+      stepMs = 150;
+      alive = true;
+      started = false;
+      state.score = 0;
+      state.over = false;
+      placeFood();
+    }
+
+    function placeFood() {
+      let tries = 0;
+      do {
+        food = { x: rnd(COLS), y: rnd(ROWS) };
+        tries++;
+      } while (tries < 200 && snake.some((s) => s.x === food.x && s.y === food.y));
+    }
+
+    function step() {
+      dir = nextDir;
+      const head = { x: snake[0].x + dir.x, y: snake[0].y + dir.y };
+
+      if (head.x < 0 || head.y < 0 || head.x >= COLS || head.y >= ROWS) {
+        alive = false;
+        state.over = true;
+        state.events.push('over');
+        return;
+      }
+      if (snake.some((s) => s.x === head.x && s.y === head.y)) {
+        alive = false;
+        state.over = true;
+        state.events.push('over');
+        return;
+      }
+
+      snake.unshift(head);
+      if (head.x === food.x && head.y === food.y) {
+        state.score += 10;
+        placeFood();
+        if (stepMs > 70) stepMs -= 3;
+        state.events.push('eat');
+      } else {
+        snake.pop();
+      }
+    }
+
+    reset();
+
+    return {
+      state,
+      reset,
+      resize(w, h) {
+        cell = Math.floor(Math.min(w / COLS, (h - 8) / ROWS));
+      },
+      input(a) {
+        const map = {
+          up: { x: 0, y: -1 }, down: { x: 0, y: 1 },
+          left: { x: -1, y: 0 }, right: { x: 1, y: 0 },
+        };
+        const d = map[a];
+        if (!d) return;
+        // 不能直接反向
+        if (d.x === -dir.x && d.y === -dir.y) return;
+        nextDir = d;
+        started = true;
+      },
+      update(dt) {
+        if (state.over || !alive) return;
+        state.label = started ? '' : '按方向键开始';
+        if (!started) return;
+        acc += dt;
+        while (acc >= stepMs) {
+          acc -= stepMs;
+          step();
+          if (state.over) break;
+        }
+      },
+      render(ctx, w, h) {
+        const ox = Math.floor((w - COLS * cell) / 2);
+        const oy = Math.floor((h - ROWS * cell) / 2);
+
+        ctx.fillStyle = C.bg;
+        ctx.fillRect(0, 0, w, h);
+
+        // 棋盘底纹
+        ctx.strokeStyle = C.grid;
+        ctx.lineWidth = 1;
+        for (let i = 0; i <= COLS; i++) {
+          ctx.beginPath();
+          ctx.moveTo(ox + i * cell, oy);
+          ctx.lineTo(ox + i * cell, oy + ROWS * cell);
+          ctx.stroke();
+        }
+        for (let j = 0; j <= ROWS; j++) {
+          ctx.beginPath();
+          ctx.moveTo(ox, oy + j * cell);
+          ctx.lineTo(ox + COLS * cell, oy + j * cell);
+          ctx.stroke();
+        }
+
+        // 食物：光晕 + 实心
+        ctx.fillStyle = C.red;
+        ctx.globalAlpha = 0.18;
+        ctx.beginPath();
+        ctx.arc(ox + food.x * cell + cell / 2, oy + food.y * cell + cell / 2, cell * 0.46, 0, 7);
+        ctx.fill();
+        ctx.globalAlpha = 1;
+        ctx.beginPath();
+        ctx.arc(ox + food.x * cell + cell / 2, oy + food.y * cell + cell / 2, cell * 0.3, 0, 7);
+        ctx.fill();
+
+        // 蛇（撞墙那一下头部会越界，跳过不画）
+        snake.forEach((s, i) => {
+          if (s.x < 0 || s.y < 0 || s.x >= COLS || s.y >= ROWS) return;
+          const t = i / Math.max(1, snake.length - 1);
+          ctx.fillStyle = i === 0 ? C.ink : `rgba(42,33,27,${0.85 - t * 0.45})`;
+          fillRR(
+            ctx,
+            ox + s.x * cell + 1.5,
+            oy + s.y * cell + 1.5,
+            cell - 3,
+            cell - 3,
+            i === 0 ? cell * 0.32 : cell * 0.24,
+            ctx.fillStyle
+          );
+        });
+      },
+    };
+  }
+
+  /* ================================================================
+     2. 俄罗斯方块
+     ================================================================ */
+  function Tetris() {
+    const COLS = 10;
+    const ROWS = 18;
+    let cell = 18;
+    const state = { score: 0, over: false, paused: false, label: '', events: [] };
+
+    const SHAPES = [
+      [[1, 1, 1, 1]],                       // I
+      [[1, 1], [1, 1]],                     // O
+      [[0, 1, 0], [1, 1, 1]],               // T
+      [[1, 0, 0], [1, 1, 1]],               // J
+      [[0, 0, 1], [1, 1, 1]],               // L
+      [[0, 1, 1], [1, 1, 0]],               // S
+      [[1, 1, 0], [0, 1, 1]],               // Z
+    ];
+    const COLORS = [C.brand, C.warn, '#8B5CF6', '#3B82F6', C.brand2, C.good, '#E9536F'];
+
+    let board, cur, nextIdx, dropAcc, dropMs, lines;
+
+    function newPiece() {
+      const idx = nextIdx;
+      nextIdx = rnd(SHAPES.length);
+      const shape = SHAPES[idx].map((r) => r.slice());
+      return {
+        cells: shape,
+        color: COLORS[idx],
+        x: Math.floor((COLS - shape[0].length) / 2),
+        y: 0,
+      };
+    }
+
+    function reset() {
+      board = Array.from({ length: ROWS }, () => Array(COLS).fill(null));
+      nextIdx = rnd(SHAPES.length);
+      cur = newPiece();
+      dropAcc = 0;
+      dropMs = 620;
+      lines = 0;
+      state.score = 0;
+      state.over = false;
+    }
+
+    function collide(cells, px, py) {
+      for (let y = 0; y < cells.length; y++) {
+        for (let x = 0; x < cells[y].length; x++) {
+          if (!cells[y][x]) continue;
+          const bx = px + x;
+          const by = py + y;
+          if (bx < 0 || bx >= COLS || by >= ROWS) return true;
+          if (by >= 0 && board[by][bx]) return true;
+        }
+      }
+      return false;
+    }
+
+    function rotate(cells) {
+      const h = cells.length;
+      const w = cells[0].length;
+      const out = Array.from({ length: w }, () => Array(h).fill(0));
+      for (let y = 0; y < h; y++) {
+        for (let x = 0; x < w; x++) out[x][h - 1 - y] = cells[y][x];
+      }
+      return out;
+    }
+
+    function lock() {
+      cur.cells.forEach((row, y) => row.forEach((v, x) => {
+        if (v && cur.y + y >= 0) board[cur.y + y][cur.x + x] = cur.color;
+      }));
+
+      // 消行
+      let cleared = 0;
+      for (let y = ROWS - 1; y >= 0; y--) {
+        if (board[y].every((c) => c)) {
+          board.splice(y, 1);
+          board.unshift(Array(COLS).fill(null));
+          cleared++;
+          y++;
+        }
+      }
+      if (cleared) {
+        lines += cleared;
+        state.score += [0, 100, 300, 500, 800][cleared] || 800;
+        dropMs = Math.max(150, 620 - lines * 22);
+        state.events.push('line');
+      }
+
+      cur = newPiece();
+      if (collide(cur.cells, cur.x, cur.y)) {
+        state.over = true;
+        state.events.push('over');
+      }
+    }
+
+    function move(dx) {
+      if (!collide(cur.cells, cur.x + dx, cur.y)) cur.x += dx;
+    }
+
+    function softDrop() {
+      if (!collide(cur.cells, cur.x, cur.y + 1)) {
+        cur.y++;
+        state.score += 1;
+      } else {
+        lock();
+      }
+    }
+
+    function hardDrop() {
+      while (!collide(cur.cells, cur.x, cur.y + 1)) {
+        cur.y++;
+        state.score += 2;
+      }
+      state.events.push('drop');
+      lock();
+    }
+
+    function doRotate() {
+      const r = rotate(cur.cells);
+      for (const dx of [0, -1, 1, -2, 2]) {
+        if (!collide(r, cur.x + dx, cur.y)) {
+          cur.cells = r;
+          cur.x += dx;
+          return;
+        }
+      }
+    }
+
+    reset();
+
+    return {
+      state,
+      reset,
+      resize(w, h) {
+        cell = Math.floor(Math.min(w / COLS, (h - 10) / ROWS));
+      },
+      input(a) {
+        if (state.over) return;
+        if (a === 'left') move(-1);
+        else if (a === 'right') move(1);
+        else if (a === 'up' || a === 'a') doRotate();
+        else if (a === 'down') softDrop();
+        else if (a === 'b') hardDrop();
+      },
+      update(dt) {
+        if (state.over) return;
+        dropAcc += dt;
+        while (dropAcc >= dropMs) {
+          dropAcc -= dropMs;
+          if (!collide(cur.cells, cur.x, cur.y + 1)) cur.y++;
+          else lock();
+          if (state.over) break;
+        }
+      },
+      render(ctx, w, h) {
+        const ox = Math.floor((w - COLS * cell) / 2);
+        const oy = Math.floor((h - ROWS * cell) / 2);
+
+        ctx.fillStyle = C.bg;
+        ctx.fillRect(0, 0, w, h);
+
+        // 边框
+        ctx.strokeStyle = C.grid;
+        ctx.lineWidth = 2;
+        ctx.strokeRect(ox, oy, COLS * cell, ROWS * cell);
+
+        const drawCell = (cx, cy, color) => {
+          fillRR(ctx, ox + cx * cell + 1.5, oy + cy * cell + 1.5, cell - 3, cell - 3, 4, color);
+        };
+
+        // 已固定的方块
+        board.forEach((row, y) => row.forEach((c, x) => {
+          if (c) drawCell(x, y, c);
+        }));
+
+        // 落点投影
+        let ghostY = cur.y;
+        while (!collide(cur.cells, cur.x, ghostY + 1)) ghostY++;
+        cur.cells.forEach((row, y) => row.forEach((v, x) => {
+          if (!v) return;
+          ctx.globalAlpha = 0.16;
+          drawCell(cur.x + x, ghostY + y, cur.color);
+          ctx.globalAlpha = 1;
+        }));
+
+        // 当前方块
+        cur.cells.forEach((row, y) => row.forEach((v, x) => {
+          if (v && cur.y + y >= 0) drawCell(cur.x + x, cur.y + y, cur.color);
+        }));
+      },
+    };
+  }
+
+  /* ================================================================
+     3. 推箱子
+     ================================================================ */
+  function Sokoban() {
+    const LEVELS = [
+      [
+        '########',
+        '#  .   #',
+        '#  $   #',
+        '#  @   #',
+        '#      #',
+        '########',
+      ],
+      [
+        '#########',
+        '#   #   #',
+        '# $ # . #',
+        '#  @    #',
+        '# $   . #',
+        '#   #   #',
+        '#########',
+      ],
+      [
+        '##########',
+        '#  ..    #',
+        '#  $$    #',
+        '#   @    #',
+        '#        #',
+        '#   ##   #',
+        '##########',
+      ],
+    ];
+
+    let cell = 30;
+    let map = [];
+    let px = 0;
+    let py = 0;
+    let level = 0;
+    let history = [];
+    const state = { score: 0, over: false, paused: false, label: '', events: [] };
+
+    function load(idx) {
+      level = idx;
+      const src = LEVELS[idx];
+      map = src.map((row) => row.split(''));
+      history = [];
+      for (let y = 0; y < map.length; y++) {
+        for (let x = 0; x < map[y].length; x++) {
+          if (map[y][x] === '@' || map[y][x] === '+') {
+            px = x; py = y;
+            map[y][x] = map[y][x] === '+' ? '*' : ' ';
+          }
+        }
+      }
+      state.over = false;
+      state.label = `第 ${idx + 1} 关 · 共 ${LEVELS.length} 关`;
+    }
+
+    function snapshot() {
+      history.push({ map: map.map((r) => r.slice()), px, py });
+      if (history.length > 60) history.shift();
+    }
+
+    function isDone() {
+      return !map.some((row) => row.some((c) => c === '$'));
+    }
+
+    function walk(dx, dy) {
+      if (state.over) return;
+      const nx = px + dx;
+      const ny = py + dy;
+      const target = map[ny] && map[ny][nx];
+      if (!target || target === '#') return;
+
+      if (target === '$') {
+        const bx = nx + dx;
+        const by = ny + dy;
+        const beyond = map[by] && map[by][bx];
+        if (!beyond || beyond === '#' || beyond === '$' || beyond === '*') return;
+        snapshot();
+        map[by][bx] = beyond === '.' ? '*' : '$';
+        map[ny][nx] = ' ';
+        px = nx; py = ny;
+        state.events.push('push');
+      } else {
+        if (target === '*') return; // 箱子落在点上，不能走
+        snapshot();
+        px = nx; py = ny;
+      }
+
+      if (isDone()) {
+        state.score += 100;
+        state.events.push('win');
+        if (level + 1 < LEVELS.length) {
+          load(level + 1);
+        } else {
+          state.over = true;
+          state.label = '全部通关';
+          state.events.push('over');
+        }
+      }
+    }
+
+    load(0);
+
+    return {
+      state,
+      reset: () => load(level),
+      resize(w, h) {
+        const rows = map.length || 6;
+        const cols = (map[0] && map[0].length) || 8;
+        cell = Math.floor(Math.min((w - 16) / cols, (h - 16) / rows));
+      },
+      input(a) {
+        if (a === 'up') walk(0, -1);
+        else if (a === 'down') walk(0, 1);
+        else if (a === 'left') walk(-1, 0);
+        else if (a === 'right') walk(1, 0);
+        else if (a === 'b') load(level);          // 重来本关
+        else if (a === 'a' && history.length) {   // 撤销
+          const s = history.pop();
+          map = s.map;
+          px = s.px;
+          py = s.py;
+        }
+      },
+      update() {},
+      render(ctx, w, h) {
+        const rows = map.length;
+        const cols = map[0].length;
+        const ox = Math.floor((w - cols * cell) / 2);
+        const oy = Math.floor((h - rows * cell) / 2);
+
+        ctx.fillStyle = C.bg;
+        ctx.fillRect(0, 0, w, h);
+
+        map.forEach((row, y) => row.forEach((c, x) => {
+          const gx = ox + x * cell;
+          const gy = oy + y * cell;
+
+          if (c === '#') {
+            fillRR(ctx, gx + 1, gy + 1, cell - 2, cell - 2, 5, '#6B5C4A');
+            return;
+          }
+          fillRR(ctx, gx + 1, gy + 1, cell - 2, cell - 2, 4, C.darkPanel);
+
+          if (c === '.' || c === '*') {
+            ctx.fillStyle = C.brand;
+            ctx.beginPath();
+            ctx.arc(gx + cell / 2, gy + cell / 2, cell * 0.18, 0, 7);
+            ctx.fill();
+          }
+          if (c === '$' || c === '*') {
+            const onGoal = c === '*';
+            fillRR(ctx, gx + cell * 0.15, gy + cell * 0.15,
+              cell * 0.7, cell * 0.7, 6, onGoal ? C.good : '#C99A5B');
+            // 木箱纹理
+            ctx.strokeStyle = 'rgba(255,255,255,.5)';
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.moveTo(gx + cell * 0.15, gy + cell * 0.15);
+            ctx.lineTo(gx + cell * 0.85, gy + cell * 0.85);
+            ctx.stroke();
+          }
+        }));
+
+        // 小人：圆头 + 肩膀 + 两条腿
+        const cx = ox + px * cell + cell / 2;
+        const cy = oy + py * cell + cell / 2;
+        const R = cell * 0.17;
+        ctx.fillStyle = C.ink;
+        ctx.beginPath();
+        ctx.arc(cx, cy - cell * 0.2, R, 0, 7);
+        ctx.fill();
+        fillRR(ctx, cx - cell * 0.21, cy - cell * 0.02, cell * 0.42, cell * 0.26, cell * 0.1, C.ink);
+        fillRR(ctx, cx - cell * 0.15, cy + cell * 0.2, cell * 0.11, cell * 0.14, 2, C.ink);
+        fillRR(ctx, cx + cell * 0.04, cy + cell * 0.2, cell * 0.11, cell * 0.14, 2, C.ink);
+
+      },
+    };
+  }
+
+  /* ================================================================
+     4. 飞机大战
+     ================================================================ */
+  function Shooter() {
+    const state = { score: 0, over: false, paused: false, label: '', events: [] };
+    let W = 360;
+    let H = 560;
+
+    let player, bullets, enemies, eBullets, parts, spawnAcc, shootAcc, hp;
+
+    function reset() {
+      player = { x: W / 2, y: H - 70, r: 15 };
+      bullets = [];
+      enemies = [];
+      eBullets = [];
+      parts = [];
+      spawnAcc = 0;
+      shootAcc = 0;
+      hp = 3;
+      state.score = 0;
+      state.over = false;
+    }
+
+    function boom(x, y, color) {
+      for (let i = 0; i < 10; i++) {
+        const a = Math.random() * 7;
+        const s = 40 + Math.random() * 120;
+        parts.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: 420, color });
+      }
+    }
+
+    reset();
+
+    return {
+      state,
+      reset,
+      resize(w, h) {
+        W = w; H = h;
+        if (player) {
+          player.x = clamp(player.x, 20, W - 20);
+          player.y = H - 70;
+        }
+      },
+      input(a) {
+        if (state.over) return;
+        const sp = 26;
+        if (a === 'left') player.x = clamp(player.x - sp, 18, W - 18);
+        else if (a === 'right') player.x = clamp(player.x + sp, 18, W - 18);
+        else if (a === 'up') player.y = clamp(player.y - sp, H * 0.45, H - 40);
+        else if (a === 'down') player.y = clamp(player.y + sp, H * 0.45, H - 40);
+      },
+      update(dt) {
+        if (state.over) return;
+        const k = dt / 16.7;
+
+        shootAcc += dt;
+        if (shootAcc > 150) {
+          shootAcc = 0;
+          bullets.push({ x: player.x, y: player.y - 18 });
+          state.events.push('shoot');
+        }
+
+        spawnAcc += dt;
+        if (spawnAcc > Math.max(320, 900 - state.score * 0.4)) {
+          spawnAcc = 0;
+          enemies.push({
+            x: 24 + Math.random() * (W - 48),
+            y: -30,
+            r: 16,
+            vy: 1.4 + Math.random() * 1.3 + state.score * 0.0006,
+            fireAcc: Math.random() * 900,
+            hp: 1 + (Math.random() < 0.15 ? 1 : 0),
+          });
+        }
+
+        bullets.forEach((b) => { b.y -= 7.5 * k; });
+        bullets = bullets.filter((b) => b.y > -20);
+
+        eBullets.forEach((b) => { b.y += 4.2 * k; });
+        eBullets = eBullets.filter((b) => b.y < H + 20);
+
+        enemies.forEach((e) => {
+          e.y += e.vy * k;
+          e.fireAcc += dt;
+          if (e.fireAcc > 1400 && e.y > 0) {
+            e.fireAcc = 0;
+            eBullets.push({ x: e.x, y: e.y + 14 });
+          }
+        });
+
+        // 子弹命中敌人
+        for (let i = enemies.length - 1; i >= 0; i--) {
+          const e = enemies[i];
+          for (let j = bullets.length - 1; j >= 0; j--) {
+            const b = bullets[j];
+            if (Math.abs(b.x - e.x) < e.r && Math.abs(b.y - e.y) < e.r) {
+              bullets.splice(j, 1);
+              e.hp--;
+              if (e.hp <= 0) {
+                boom(e.x, e.y, C.brand);
+                enemies.splice(i, 1);
+                state.score += 10;
+                state.events.push('boom');
+              } else {
+                state.events.push('hit');
+              }
+              break;
+            }
+          }
+        }
+
+        // 敌人撞玩家
+        enemies.forEach((e) => {
+          if (Math.abs(e.x - player.x) < e.r + 10 && Math.abs(e.y - player.y) < e.r + 12) {
+            boom(e.x, e.y, C.warn);
+            e.y = H + 100;
+            hp--;
+            state.events.push('hurt');
+          }
+        });
+        enemies = enemies.filter((e) => e.y < H + 40);
+
+        // 敌弹命中玩家
+        for (let i = eBullets.length - 1; i >= 0; i--) {
+          const b = eBullets[i];
+          if (Math.abs(b.x - player.x) < 12 && Math.abs(b.y - player.y) < 14) {
+            eBullets.splice(i, 1);
+            boom(player.x, player.y, C.brand2);
+            hp--;
+            state.events.push('hurt');
+          }
+        }
+
+        parts.forEach((p) => {
+          p.x += p.vx * (dt / 1000);
+          p.y += p.vy * (dt / 1000);
+          p.life -= dt;
+        });
+        parts = parts.filter((p) => p.life > 0);
+
+        if (hp <= 0) {
+          state.over = true;
+          state.events.push('over');
+        }
+        state.label = `生命 ${Math.max(0, hp)} / 3`;
+      },
+      render(ctx, w, h) {
+        ctx.fillStyle = '#1E1A16';
+        ctx.fillRect(0, 0, w, h);
+
+        // 星空
+        for (let i = 0; i < 26; i++) {
+          const y = ((i * 97 + (performance.now() * 0.03)) % h);
+          ctx.fillStyle = i % 3 ? 'rgba(255,255,255,.18)' : 'rgba(255,255,255,.4)';
+          ctx.fillRect((i * 53) % w, y, 2, 2);
+        }
+
+        // 玩家飞机
+        ctx.save();
+        ctx.translate(player.x, player.y);
+        // 机身
+        ctx.fillStyle = C.brand;
+        ctx.beginPath();
+        ctx.moveTo(0, -20);
+        ctx.quadraticCurveTo(5, -10, 5, 4);
+        ctx.lineTo(5, 13);
+        ctx.lineTo(-5, 13);
+        ctx.lineTo(-5, 4);
+        ctx.quadraticCurveTo(-5, -10, 0, -20);
+        ctx.closePath();
+        ctx.fill();
+        // 后掠翼
+        ctx.fillStyle = C.brand2;
+        ctx.beginPath();
+        ctx.moveTo(-4, -2);
+        ctx.lineTo(-17, 11);
+        ctx.lineTo(-16, 14);
+        ctx.lineTo(-4, 10);
+        ctx.closePath();
+        ctx.fill();
+        ctx.beginPath();
+        ctx.moveTo(4, -2);
+        ctx.lineTo(17, 11);
+        ctx.lineTo(16, 14);
+        ctx.lineTo(4, 10);
+        ctx.closePath();
+        ctx.fill();
+        // 尾翼
+        ctx.beginPath();
+        ctx.moveTo(-3, 10);
+        ctx.lineTo(-8, 15);
+        ctx.lineTo(8, 15);
+        ctx.lineTo(3, 10);
+        ctx.closePath();
+        ctx.fill();
+        // 座舱
+        ctx.fillStyle = 'rgba(255,255,255,.75)';
+        ctx.beginPath();
+        ctx.ellipse(0, -6, 2.6, 5, 0, 0, 7);
+        ctx.fill();
+        ctx.restore();
+
+        // 我方子弹
+        bullets.forEach((b) => {
+          fillRR(ctx, b.x - 2, b.y - 8, 4, 12, 2, '#FFD9C2');
+        });
+
+        // 敌机
+        enemies.forEach((e) => {
+          ctx.fillStyle = e.hp > 1 ? '#8B5CF6' : '#7BC96F';
+          ctx.beginPath();
+          ctx.moveTo(e.x, e.y + 15);
+          ctx.lineTo(e.x + 14, e.y - 10);
+          ctx.lineTo(e.x, e.y - 4);
+          ctx.lineTo(e.x - 14, e.y - 10);
+          ctx.closePath();
+          ctx.fill();
+        });
+
+        // 敌弹
+        eBullets.forEach((b) => {
+          ctx.fillStyle = '#FF6B6B';
+          ctx.beginPath();
+          ctx.arc(b.x, b.y, 3.4, 0, 7);
+          ctx.fill();
+        });
+
+        // 爆炸粒子
+        parts.forEach((p) => {
+          ctx.globalAlpha = Math.max(0, p.life / 420);
+          ctx.fillStyle = p.color;
+          ctx.fillRect(p.x - 2, p.y - 2, 4, 4);
+          ctx.globalAlpha = 1;
+        });
+      },
+    };
+  }
+
+  /* ================================================================
+     5. 坦克大战
+     ================================================================ */
+  function Tank() {
+    const state = { score: 0, over: false, paused: false, label: '', events: [] };
+
+    // 战场固定 13×20 逻辑格，格子按画布自适应、整体居中——
+    // 手机上墙不会再缩在左上角（旧版固定 36px 且 resize 不重排）
+    const COLS = 13;
+    const ROWS = 20;
+
+    let W = 360;
+    let H = 560;
+    let cell = 27;
+    let ox = 0;
+    let oy = 0;
+    let T = 25;
+
+    let player, enemies, bullets, walls, parts, spawnAcc, hp, baseAlive;
+
+    const bfLeft = () => ox;
+    const bfTop = () => oy;
+    const bfRight = () => ox + COLS * cell;
+    const bfBottom = () => oy + ROWS * cell;
+    const bfCX = () => ox + (COLS * cell) / 2;
+    const wallCX = (w) => ox + w.cx * cell + cell / 2;
+    const wallCY = (w) => oy + w.cy * cell + cell / 2;
+
+    function layout() {
+      cell = Math.min(W / COLS, H / ROWS);
+      ox = (W - COLS * cell) / 2;
+      oy = (H - ROWS * cell) / 2;
+      T = cell * 0.92;
+    }
+
+    function buildWalls() {
+      walls = [];
+      const put = (cx, cy, hp) => {
+        if (cx < 1 || cx > COLS - 2 || cy < 1 || cy > ROWS - 3) return;
+        walls.push({ cx, cy, hp: hp || 2 });
+      };
+
+      const left = 2;
+      const right = COLS - 3;
+      [3, 4, 8, 9].forEach((cy) => { put(left, cy); put(right, cy); });
+      [4, 5, 9, 10].forEach((cy) => { put(left + 1, cy); put(right - 1, cy); });
+
+      const mid = Math.floor(COLS / 2);
+      [5, 6].forEach((cx) => { put(cx, 6); put(COLS - 1 - cx, 6); });
+      put(mid, 7);
+      put(mid, 11);
+      put(mid - 1, 11);
+      put(mid + 1, 11);
+
+      const baseCol = Math.floor(COLS / 2);
+      put(baseCol - 2, ROWS - 4, 3);
+      put(baseCol + 2, ROWS - 4, 3);
+      put(baseCol - 1, ROWS - 3, 3);
+      put(baseCol + 1, ROWS - 3, 3);
+    }
+
+    function boom(x, y, color) {
+      for (let i = 0; i < 8; i++) {
+        const a = Math.random() * 6.28;
+        const s = cell * (2 + Math.random() * 4);
+        parts.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: 380, color });
+      }
+    }
+
+    function reset() {
+      layout();
+      player = { x: bfCX(), y: bfBottom() - cell * 1.4, dir: 0, cool: 0 };
+      enemies = [];
+      bullets = [];
+      parts = [];
+      hp = 3;
+      baseAlive = true;
+      spawnAcc = 0;
+      state.score = 0;
+      state.over = false;
+      buildWalls();
+    }
+
+    function shoot() {
+      if (player.cool > 0) return;
+      player.cool = 260;
+      const d = DIRS[player.dir];
+      bullets.push({
+        x: player.x + d.x * T * 0.55,
+        y: player.y + d.y * T * 0.55,
+        vx: d.x, vy: d.y, mine: true,
+      });
+      state.events.push('shoot');
+    }
+
+    function enemyShoot(e) {
+      const d = DIRS[e.dir];
+      bullets.push({
+        x: e.x + d.x * T * 0.55,
+        y: e.y + d.y * T * 0.55,
+        vx: d.x, vy: d.y, mine: false,
+      });
+    }
+
+    function hitWall(x, y) {
+      return walls.some((w) => Math.abs(wallCX(w) - x) < cell * 0.72 &&
+        Math.abs(wallCY(w) - y) < cell * 0.72);
+    }
+
+    const DIRS = [
+      { x: 0, y: -1 }, { x: 1, y: 0 }, { x: 0, y: 1 }, { x: -1, y: 0 },
+    ];
+
+    reset();
+
+    return {
+      state,
+      reset,
+      resize(w, h) {
+        W = w; H = h;
+        layout();
+        const half = T / 2;
+        player.x = clamp(player.x, bfLeft() + half, bfRight() - half);
+        player.y = clamp(player.y, bfTop() + T, bfBottom() - half);
+        enemies.forEach((e) => {
+          e.x = clamp(e.x, bfLeft() + half, bfRight() - half);
+          e.y = clamp(e.y, bfTop() + half, bfBottom() - T);
+        });
+        bullets = bullets.filter((b) =>
+          b.x > bfLeft() && b.x < bfRight() && b.y > bfTop() && b.y < bfBottom());
+      },
+      input(a) {
+        if (state.over) return;
+        const step = cell * 0.62;
+        if (a === 'up') { player.dir = 0; player.y = Math.max(bfTop() + T / 2, player.y - step); }
+        else if (a === 'right') { player.dir = 1; player.x = Math.min(bfRight() - T / 2, player.x + step); }
+        else if (a === 'down') { player.dir = 2; player.y = Math.min(bfBottom() - T / 2, player.y + step); }
+        else if (a === 'left') { player.dir = 3; player.x = Math.max(bfLeft() + T / 2, player.x - step); }
+        else if (a === 'a' || a === 'b') shoot();
+      },
+      update(dt) {
+        if (state.over) return;
+        const k = dt / 16.7;
+        const espd = cell * 0.043 * k;
+        const bspd = cell * 0.18 * k;
+        player.cool = Math.max(0, player.cool - dt);
+
+        spawnAcc += dt;
+        if (spawnAcc > Math.max(900, 2000 - state.score * 3) && enemies.length < 5) {
+          spawnAcc = 0;
+          let ex = bfLeft() + cell * 1.5;
+          for (let t = 0; t < 16; t++) {
+            const cand = bfLeft() + cell + Math.random() * (COLS * cell - cell * 2);
+            const tooClose = enemies.some((o) => Math.abs(o.x - cand) < T * 1.3);
+            if (!hitWall(cand, bfTop() + cell * 0.7) && !tooClose) { ex = cand; break; }
+          }
+          enemies.push({
+            x: ex,
+            y: bfTop() + cell * 0.6,
+            dir: 2,
+            hp: Math.random() < 0.25 ? 2 : 1,
+          });
+        }
+
+        enemies.forEach((e) => {
+          if (Math.random() < dt / 700) e.dir = Math.floor(Math.random() * 4);
+          const d = DIRS[e.dir];
+          const nx = e.x + d.x * espd;
+          const ny = e.y + d.y * espd;
+          if (nx > bfLeft() + T / 2 && nx < bfRight() - T / 2 &&
+            ny > bfTop() + T / 2 && ny < bfBottom() - T && !hitWall(nx, ny)) {
+            e.x = nx;
+            e.y = ny;
+          } else {
+            e.dir = Math.floor(Math.random() * 4);
+          }
+
+          if (Math.random() < dt / 1500) enemyShoot(e);
+        });
+
+        bullets.forEach((b) => {
+          b.x += b.vx * bspd;
+          b.y += b.vy * bspd;
+        });
+
+        // 子弹打墙
+        bullets.forEach((b) => {
+          for (let i = walls.length - 1; i >= 0; i--) {
+            const w = walls[i];
+            if (b.x > ox + w.cx * cell && b.x < ox + (w.cx + 1) * cell &&
+              b.y > oy + w.cy * cell && b.y < oy + (w.cy + 1) * cell) {
+              w.hp--;
+              b.dead = true;
+              boom(b.x, b.y, '#B08958');
+              if (w.hp <= 0) walls.splice(i, 1);
+              break;
+            }
+          }
+        });
+
+        // 我方子弹打敌人
+        bullets.filter((b) => b.mine && !b.dead).forEach((b) => {
+          for (let i = enemies.length - 1; i >= 0; i--) {
+            const e = enemies[i];
+            if (Math.abs(b.x - e.x) < T * 0.7 && Math.abs(b.y - e.y) < T * 0.7) {
+              b.dead = true;
+              e.hp--;
+              if (e.hp <= 0) {
+                enemies.splice(i, 1);
+                state.score += 20;
+                boom(e.x, e.y, C.brand);
+                state.events.push('boom');
+              } else {
+                state.events.push('hit');
+              }
+              break;
+            }
+          }
+        });
+
+        // 敌弹打玩家
+        bullets.filter((b) => !b.mine && !b.dead).forEach((b) => {
+          if (Math.abs(b.x - player.x) < T * 0.6 && Math.abs(b.y - player.y) < T * 0.6) {
+            b.dead = true;
+            hp--;
+            player.x = bfCX();
+            player.y = bfBottom() - cell * 1.4;
+            boom(player.x, player.y, C.brand2);
+            state.events.push('hurt');
+          }
+        });
+
+        // 敌人撞玩家
+        enemies.forEach((e) => {
+          if (Math.abs(e.x - player.x) < T && Math.abs(e.y - player.y) < T) {
+            hp--;
+            e.hp = 0;
+            boom(e.x, e.y, C.warn);
+            state.events.push('hurt');
+          }
+        });
+        enemies = enemies.filter((e) => e.hp > 0);
+
+        parts.forEach((p) => {
+          p.x += p.vx * (dt / 1000);
+          p.y += p.vy * (dt / 1000);
+          p.life -= dt;
+        });
+        parts = parts.filter((p) => p.life > 0);
+
+        bullets = bullets.filter((b) => !b.dead &&
+          b.x > bfLeft() - 10 && b.x < bfRight() + 10 &&
+          b.y > bfTop() - 10 && b.y < bfBottom() + 10);
+
+        if (hp <= 0 || !baseAlive) {
+          state.over = true;
+          state.events.push('over');
+        }
+        state.label = `生命 ${Math.max(0, hp)} / 3`;
+      },
+      render(ctx, w, h) {
+        ctx.fillStyle = C.bg;
+        ctx.fillRect(0, 0, w, h);
+
+        // 战场地面 + 边框
+        fillRR(ctx, bfLeft(), bfTop(), COLS * cell, ROWS * cell, 8, C.darkPanel);
+        ctx.strokeStyle = C.grid;
+        ctx.lineWidth = 1;
+        for (let i = 1; i < COLS; i++) {
+          ctx.beginPath();
+          ctx.moveTo(bfLeft() + i * cell, bfTop());
+          ctx.lineTo(bfLeft() + i * cell, bfBottom());
+          ctx.stroke();
+        }
+        for (let j = 1; j < ROWS; j++) {
+          ctx.beginPath();
+          ctx.moveTo(bfLeft(), bfTop() + j * cell);
+          ctx.lineTo(bfRight(), bfTop() + j * cell);
+          ctx.stroke();
+        }
+
+        // 砖墙
+        walls.forEach((wl) => {
+          const x = ox + wl.cx * cell;
+          const y = oy + wl.cy * cell;
+          fillRR(ctx, x + 1, y + 1, cell - 2, cell - 2, 3,
+            wl.hp >= 3 ? '#8A6A45' : '#B08958');
+          ctx.strokeStyle = 'rgba(0,0,0,.25)';
+          ctx.beginPath();
+          ctx.moveTo(x + 1, y + cell / 2);
+          ctx.lineTo(x + cell - 1, y + cell / 2);
+          ctx.stroke();
+        });
+
+        // 基地
+        const bw = cell * 1.1;
+        const bh = cell * 0.8;
+        ctx.fillStyle = baseAlive ? '#8A6A2F' : '#4A4038';
+        rr(ctx, bfCX() - bw / 2, bfBottom() - bh - 4, bw, bh, 5);
+        ctx.fill();
+        ctx.fillStyle = baseAlive ? C.warn : '#6B5F55';
+        rr(ctx, bfCX() - bw / 2 + 4, bfBottom() - bh, bw - 8, bh - 8, 3);
+        ctx.fill();
+
+        const drawTank = (x, y, dir, color, size) => {
+          ctx.save();
+          ctx.translate(x, y);
+          ctx.rotate((dir * Math.PI) / 2);
+          ctx.fillStyle = 'rgba(0,0,0,.4)';
+          rr(ctx, -size * 0.5, -size * 0.38, size * 0.14, size * 0.76, 2);
+          ctx.fill();
+          rr(ctx, size * 0.36, -size * 0.38, size * 0.14, size * 0.76, 2);
+          ctx.fill();
+          ctx.fillStyle = color;
+          rr(ctx, -size * 0.42, -size * 0.42, size * 0.84, size * 0.84, 4);
+          ctx.fill();
+          ctx.fillStyle = 'rgba(0,0,0,.45)';
+          rr(ctx, -size * 0.09, -size * 0.72, size * 0.18, size * 0.5, 2);
+          ctx.fill();
+          ctx.restore();
+        };
+
+        drawTank(player.x, player.y, player.dir, C.brand, T);
+        enemies.forEach((e) => drawTank(e.x, e.y, e.dir, e.hp > 1 ? '#8B5CF6' : '#7BC96F', T));
+
+        bullets.forEach((b) => {
+          ctx.fillStyle = b.mine ? '#FFD9C2' : '#FF6B6B';
+          ctx.beginPath();
+          ctx.arc(b.x, b.y, cell * 0.1, 0, 7);
+          ctx.fill();
+        });
+
+        parts.forEach((p) => {
+          ctx.globalAlpha = Math.max(0, p.life / 380);
+          ctx.fillStyle = p.color;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, cell * 0.09, 0, 7);
+          ctx.fill();
+          ctx.globalAlpha = 1;
+        });
+      },
+    };
+  }
+
+  /* ================================================================
+     对外接口
+     ================================================================ */
+  const META = [
+    {
+      key: 'snake', name: '贪吃蛇', desc: '吃到红色的果子，别撞墙也别咬到自己',
+      icon: 'snake', hint: '方向键转向',
+    },
+    {
+      key: 'tetris', name: '俄罗斯方块', desc: '转一转、堆一堆，消掉整行拿高分',
+      icon: 'tetris', hint: '▲旋转 · ▼加速 · 长按▼直接落底',
+    },
+    {
+      key: 'sokoban', name: '推箱子', desc: '把木箱推到圆点上，共三关',
+      icon: 'box', hint: 'A 撤销 · B 重来本关',
+    },
+    {
+      key: 'shooter', name: '飞机大战', desc: '自动开火，躲子弹，活下来',
+      icon: 'plane', hint: '方向键移动',
+    },
+    {
+      key: 'tank', name: '坦克大战', desc: '守住基地，打掉来袭的坦克',
+      icon: 'tank', hint: '方向键移动 · A 开炮',
+    },
+  ];
+
+  const FACTORY = {
+    snake: Snake,
+    tetris: Tetris,
+    sokoban: Sokoban,
+    shooter: Shooter,
+    tank: Tank,
+  };
+
+  function create(key) {
+    const f = FACTORY[key];
+    return f ? f() : null;
+  }
+
+  root.Games = { META, create };
+})(typeof self !== 'undefined' ? self : this);
+
+</script>
+<script>
+/* 我的菜谱 · 网页预览版
+   与 Android 版共用同一套数据模型与交互规则，数据存在浏览器 IndexedDB。 */
+
+(() => {
+'use strict';
+
+const P = window.RecipeParser;
+
+// ---------------------------------------------------------------- 图标
+
+const I = {
+  add: '<path d="M19,13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>',
+  search: '<path d="M15.5,14h-0.79l-0.28,-0.27C15.41,12.59 16,11.11 16,9.5 16,5.91 13.09,3 9.5,3S3,5.91 3,9.5 5.91,16 9.5,16c1.61,0 3.09,-0.59 4.23,-1.57l0.27,0.28v0.79l5,4.99L20.49,19l-4.99,-5zM9.5,14C7.01,14 5,11.99 5,9.5S7.01,5 9.5,5 14,7.01 14,9.5 11.99,14 9.5,14z"/>',
+  back: '<path d="M20,11H7.83l5.59,-5.59L12,4l-8,8 8,8 1.41,-1.41L7.83,13H20v-2z"/>',
+  edit: '<path d="M3,17.25V21h3.75L17.81,9.94l-3.75,-3.75L3,17.25zM20.71,7.04c0.39,-0.39 0.39,-1.02 0,-1.41l-2.34,-2.34c-0.39,-0.39 -1.02,-0.39 -1.41,0l-1.83,1.83 3.75,3.75 1.83,-1.83z"/>',
+  close: '<path d="M19,6.41L17.59,5 12,10.59 6.41,5 5,6.41 10.59,12 5,17.59 6.41,19 12,13.41 17.59,19 19,17.59 13.41,12z"/>',
+  download: '<path d="M19,9h-4V3H9v6H5l7,7 7,-7zM5,18v2h14v-2H5z"/>',
+  chevron: '<path d="M9,6l6,6 -6,6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>',
+  upload: '<path d="M9,16h6v-6h4l-7,-7 -7,7h4zM5,18v2h14v-2H5z"/>',
+  sort: '<path d="M3,18h6v-2H3V18zM3,6v2h18V6H3zM3,13h12v-2H3V13z"/>',
+  check: '<path d="M9,16.17L4.83,12l-1.42,1.41L9,19 21,7l-1.41,-1.41z"/>',
+  spark: '<path d="M12 2.6l1.9 5.1 5.1 1.9-5.1 1.9L12 16.6l-1.9-5.1L5 9.6l5.1-1.9L12 2.6zM18.6 15.2l.9 2.3 2.3.9-2.3.9-.9 2.3-.9-2.3-2.3-.9 2.3-.9.9-2.3z"/>',
+  setting: '<path d="M19.14 12.94a7.07 7.07 0 0 0 0-1.88l2.03-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.6-.22l-2.39.96a7.03 7.03 0 0 0-1.62-.94l-.36-2.54a.5.5 0 0 0-.5-.42h-3.84a.5.5 0 0 0-.49.42l-.36 2.54c-.58.24-1.12.55-1.62.94l-2.39-.96a.5.5 0 0 0-.6.22L2.71 8.84a.5.5 0 0 0 .12.64l2.03 1.58a7.07 7.07 0 0 0 0 1.88l-2.03 1.58a.5.5 0 0 0-.12.64l1.92 3.32c.13.22.39.3.6.22l2.39-.96c.5.39 1.04.7 1.62.94l.36 2.54c.04.24.25.42.49.42h3.84c.25 0 .46-.18.5-.42l.36-2.54c.58-.24 1.12-.55 1.62-.94l2.39.96c.22.08.47 0 .6-.22l1.92-3.32a.5.5 0 0 0-.12-.64l-2.03-1.58zM12 15.6A3.6 3.6 0 1 1 12 8.4a3.6 3.6 0 0 1 0 7.2z"/>',
+};
+
+const svg = (name, size = 22, opacity = 1) =>
+  `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="currentColor" style="opacity:${opacity}" aria-hidden="true">${I[name]}</svg>`;
+
+const svg2 = (d, size = 24) =>
+  `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">${d}</svg>`;
+
+const strokeIcon = (d, size = 24, sw = 1.7) =>
+  `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+        stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+
+const ICON_PHOTO = `<rect x="3" y="4.5" width="18" height="15" rx="3.4"/><circle cx="8.6" cy="9.9" r="1.7"/><path d="M3.6 16.8l4.9-4.7 3.6 3.5 3.2-3 5.1 4.5"/>`;
+const ICON_BOWL = `<path d="M3.6 10.2h16.8c0 4.6-3.76 8.3-8.4 8.3s-8.4-3.7-8.4-8.3z"/><path d="M2.2 10.2h19.6"/>`;
+const ICON_CLOCK = `<circle cx="12" cy="12" r="8.6"/><path d="M12 7.3V12l3.1 1.9"/>`;
+const ICON_USER = `<circle cx="12" cy="8.2" r="3.5"/><path d="M5.6 19.4c0-3.2 2.9-5.3 6.4-5.3s6.4 2.1 6.4 5.3"/>`;
+const ICON_FLAME = `<path d="M12 3.3c.5 2.6 2.2 3.6 2.2 6.1a2.15 2.15 0 0 1-4.3 0c0-.9.3-1.7.8-2.4-1.4 1.3-2.5 3-2.5 5.2a3.8 3.8 0 1 0 7.6 0c0-3.5-2.2-6.1-3.8-8.9z"/>`;
+
+// ---------------------------------------------------------------- 常量
+
+const CATEGORIES = [
+  { key: 'home', label: '家常菜' },
+  { key: 'soup', label: '汤羹' },
+  { key: 'staple', label: '主食' },
+  { key: 'cold', label: '凉菜' },
+  { key: 'dessert', label: '甜点' },
+  { key: 'other', label: '其他' },
+];
+const catLabel = (k) => (CATEGORIES.find((c) => c.key === k) || CATEGORIES[5]).label;
+const DIFF = ['简单', '中等', '有点难'];
+
+// 直连模式的出厂配置：和 App 端一致用智谱 glm-4-flash，带默认 Key，开箱即用。
+// 用户在设置页填自己的 Key 后以用户的为准。
+// 注意：Key 打包进前端文件就等于公开，公开发布前要换成服务端代理。
+const DEFAULT_API = {
+  baseUrl: 'https://open.bigmodel.cn/api/paas/v4',
+  model: 'glm-4-flash',
+  key: '0214776f7c53423bb64eb4c20261dc0b.j8uG29SXkMoy0uNf',
+};
+
+const PLACEHOLDER = `把菜谱文本粘进来，自动识别菜名、食材和步骤。
+
+# 花菜炒肉
+### 食材
+花菜半颗、瘦肉 200g、蒜 3 瓣、生抽 2 勺、盐
+### 步骤
+1. 花菜掰小朵，盐水泡 5 分钟，焯水 30 秒捞出。
+2. 热锅放油，肉片大火炒至变色盛出。
+3. 爆香蒜片，下花菜翻炒 2 分钟，倒回肉片调味出锅。
+> 小贴士：焯水别太久，否则花菜软塌不清脆。`;
+
+// ---------------------------------------------------------------- 数据层
+
+const DB_NAME = 'zuocai-web';
+const DB_VER = 1;
+let _db = null;
+
+function openDb() {
+  if (_db) return Promise.resolve(_db);
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(DB_NAME, DB_VER);
+    req.onupgradeneeded = () => {
+      const db = req.result;
+      if (!db.objectStoreNames.contains('recipes')) db.createObjectStore('recipes', { keyPath: 'id' });
+      if (!db.objectStoreNames.contains('images')) db.createObjectStore('images');
+    };
+    req.onsuccess = () => { _db = req.result; resolve(_db); };
+    req.onerror = () => reject(req.error);
+  });
+}
+
+function tx(store, mode) {
+  return openDb().then((db) => db.transaction(store, mode).objectStore(store));
+}
+
+function reqToPromise(request) {
+  return new Promise((resolve, reject) => {
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+}
+
+const dbAll = () => tx('recipes', 'readonly').then((s) => reqToPromise(s.getAll()));
+const dbGet = (id) => tx('recipes', 'readonly').then((s) => reqToPromise(s.get(id)));
+const dbPut = (r) => tx('recipes', 'readwrite').then((s) => reqToPromise(s.put(r)));
+const dbDel = (id) => tx('recipes', 'readwrite').then((s) => reqToPromise(s.delete(id)));
+const imgGet = (k) => tx('images', 'readonly').then((s) => reqToPromise(s.get(k)));
+const imgPut = (k, b) => tx('images', 'readwrite').then((s) => reqToPromise(s.put(b, k)));
+const imgDel = (k) => tx('images', 'readwrite').then((s) => reqToPromise(s.delete(k)));
+
+// ---------------------------------------------------------------- 图片
+
+const urlCache = new Map();
+
+async function imageUrl(key) {
+  if (!key) return null;
+  // 内置封面是静态文件，直接当相对路径用，不进 IndexedDB
+  if (key.indexOf('covers/') === 0) return key;
+  if (urlCache.has(key)) return urlCache.get(key);
+  const blob = await imgGet(key);
+  if (!blob) return null;
+  const url = URL.createObjectURL(blob);
+  urlCache.set(key, url);
+  return url;
+}
+
+function compressImage(file, maxEdge = 1600, quality = 0.88) {
+  return new Promise((resolve, reject) => {
+    const src = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      const scale = Math.min(1, maxEdge / Math.max(img.naturalWidth, img.naturalHeight));
+      const w = Math.max(1, Math.round(img.naturalWidth * scale));
+      const h = Math.max(1, Math.round(img.naturalHeight * scale));
+      const canvas = document.createElement('canvas');
+      canvas.width = w;
+      canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      canvas.toBlob((blob) => {
+        URL.revokeObjectURL(src);
+        blob ? resolve(blob) : reject(new Error('compress failed'));
+      }, 'image/jpeg', quality);
+    };
+    img.onerror = () => { URL.revokeObjectURL(src); reject(new Error('decode failed')); };
+    img.src = src;
+  });
+}
+
+async function storeImage(file) {
+  const blob = await compressImage(file);
+  return storeBlob(blob);
+}
+
+async function storeBlob(blob) {
+  const key = 'img_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+  await imgPut(key, blob);
+  return key;
+}
+
+async function hydrateImages(scope) {
+  const nodes = [...scope.querySelectorAll('[data-img]')];
+  for (const el of nodes) {
+    const key = el.getAttribute('data-img');
+    if (!key) continue;
+    const url = await imageUrl(key);
+    if (url && el.getAttribute('data-img') === key) {
+      el.src = url;
+      el.style.display = 'block';
+      const ph = el.parentElement.querySelector('.ph');
+      if (ph) ph.style.display = 'none';
+    }
+  }
+}
+
+// ---------------------------------------------------------------- 状态
+
+const state = {
+  keyword: '',
+  category: null,
+  // 出厂默认「使用最多」；用户手动换过就记住他的选择
+  sort: (() => {
+    try { return localStorage.getItem('zuocai_sort') || 'usage'; } catch { return 'usage'; }
+  })(),
+  lastCountedKw: null,
+  recipes: [],
+  editId: null,
+  editFrom: 'list',
+  draft: null,
+  dirty: false,
+  userPickedCat: false,
+};
+
+const root = document.getElementById('screen');
+const phone = document.querySelector('.phone');
+
+// 本地服务代理：serve.py 会把请求转发给大模型，绕开浏览器跨域限制
+const proxy = { on: false, configured: false, model: '', baseUrl: '' };
+
+async function detectProxy() {
+  if (!/^https?:$/.test(location.protocol)) return;
+  try {
+    const r = await fetch('/api/status', { cache: 'no-store' });
+    if (!r.ok) return;
+    const j = await r.json();
+    if (j && j.proxy) {
+      proxy.on = true;
+      proxy.configured = !!j.configured;
+      proxy.model = j.model || '';
+      proxy.baseUrl = j.baseUrl || '';
+    }
+  } catch {
+    /* 没有代理服务，走直连 */
+  }
+}
+
+// ---------------------------------------------------------------- 工具
+
+const esc = (s) =>
+  String(s ?? '').replace(/[&<>"']/g, (c) =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])
+  );
+
+const $ = (sel, scope = document) => scope.querySelector(sel);
+const $$ = (sel, scope = document) => [...scope.querySelectorAll(sel)];
+
+function toast(msg) {
+  const old = $('.toast');
+  if (old) old.remove();
+  const el = document.createElement('div');
+  el.className = 'toast';
+  el.textContent = msg;
+  phone.appendChild(el);
+  requestAnimationFrame(() => el.classList.add('show'));
+  setTimeout(() => {
+    el.classList.remove('show');
+    setTimeout(() => el.remove(), 240);
+  }, 1800);
+}
+
+function dialog({ title, message, actions, custom }) {
+  return new Promise((resolve) => {
+    const mask = document.createElement('div');
+    mask.className = 'mask';
+    mask.innerHTML = `
+      <div class="dialog">
+        <h4>${esc(title)}</h4>
+        ${custom || `<p>${esc(message || '')}</p>`}
+        <div class="acts">
+          ${actions.map((a, i) =>
+            `<button data-i="${i}" class="${a.style || ''}">${esc(a.label)}</button>`
+          ).join('')}
+        </div>
+      </div>`;
+    phone.appendChild(mask);
+    mask.addEventListener('click', (e) => {
+      const btn = e.target.closest('button[data-i]');
+      if (btn) {
+        const action = actions[Number(btn.dataset.i)];
+        mask.remove();
+        resolve(action.value);
+      } else if (e.target === mask) {
+        mask.remove();
+        resolve(null);
+      }
+    });
+  });
+}
+
+function newRecipe() {
+  return {
+    id: 0, name: '', category: 'home', cover: null, description: '',
+    servings: 2, minutes: 0, difficulty: 1,
+    ingredients: [], steps: [], createdAt: 0, updatedAt: 0,
+  };
+}
+
+function nextId() {
+  return state.recipes.reduce((m, r) => Math.max(m, r.id || 0), 0) + 1;
+}
+
+function clone(r) { return JSON.parse(JSON.stringify(r)); }
+function debounce(fn, ms) { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; }
+
+// ---------------------------------------------------------------- 查询
+
+function queryRecipes() {
+  let list = state.recipes.slice();
+  const words = searchWords();
+
+  // 每个词都要在 菜名/描述/食材 之一出现（空格 = AND）
+  if (words.length) {
+    list = list.filter((r) => {
+      const name = (r.name || '').toLowerCase();
+      const desc = (r.description || '').toLowerCase();
+      const ings = (r.ingredients || []).map((i) => i.n || '').join(' ').toLowerCase();
+      return words.every((w) => name.includes(w) || desc.includes(w) || ings.includes(w));
+    });
+
+    // 相关度：菜名 2 分、描述 1 分，多词求和；命中食材不计分。
+    // 不然搜「土豆」时腊肉焖饭（食材命中）可能排在土豆炒肉前面，看起来像搜错了。
+    const rel = (r) => {
+      const name = (r.name || '').toLowerCase();
+      const desc = (r.description || '').toLowerCase();
+      return words.reduce((s, w) =>
+        s + (name.includes(w) ? 2 : desc.includes(w) ? 1 : 0), 0);
+    };
+
+    list.sort((a, b) => rel(b) - rel(a) || sortCmp(a, b));
+  } else {
+    list.sort(sortCmp);
+  }
+  return list;
+}
+
+/** 用户选的排序方式（相关度排在它前面，只在有搜索词时生效） */
+function sortCmp(a, b) {
+  if (state.sort === 'name') {
+    return a.name.localeCompare(b.name, 'zh-Hans-CN');
+  }
+  if (state.sort === 'usage') {
+    // 打开次数 + 搜索命中次数，热度相同的再按最近更新
+    const heat = (r) => (r.openCount || 0) + (r.searchCount || 0);
+    return heat(b) - heat(a) || (b.updatedAt || 0) - (a.updatedAt || 0) || b.id - a.id;
+  }
+  return (b.updatedAt || 0) - (a.updatedAt || 0) || b.id - a.id;
+}
+
+/** 使用量 +1：直接改内存对象，排序立刻生效，落库异步进行 */
+function bumpUsage(recipe, field) {
+  if (!recipe) return;
+  recipe[field] = (recipe[field] || 0) + 1;
+  dbPut(recipe).catch(() => {});
+}
+
+/** 搜索命中：菜名匹配的菜谱各 +1，同一个关键词只记一次 */
+function countSearchHits(keyword) {
+  const kw = (keyword || '').trim().toLowerCase();
+  if (kw.length < 2) return;
+  if (kw === state.lastCountedKw) return;
+  state.lastCountedKw = kw;
+  for (const r of state.recipes) {
+    if (!(r.name || '').toLowerCase().includes(kw)) continue;
+    r.searchCount = (r.searchCount || 0) + 1;
+    dbPut(r).catch(() => {});
+  }
+}
+
+// ---------------------------------------------------------------- 首页
+
+function listView() {
+  return `
+  <div class="view enter-left">
+    <div class="list-header">
+      <div class="head-row">
+        <div class="head-text">
+          <h1>我的菜谱</h1>
+          <div class="sub" id="listSub">记录每一次下厨的味道</div>
+        </div>
+        <div class="head-actions">
+          <button class="round-btn" id="btnImport" aria-label="导入" title="导入">${svg('download', 19)}</button>
+          <button class="round-btn" id="btnExport" aria-label="导出" title="导出">${svg('upload', 19)}</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="searchbar">
+      ${svg('search', 19)}
+      <input id="searchInput" type="text" placeholder="搜索菜名或食材，空格分隔多个词" autocomplete="off" value="${esc(state.keyword)}">
+      <button class="clear ${state.keyword ? 'show' : ''}" id="searchClear" aria-label="清空">${svg('close', 20)}</button>
+    </div>
+
+    <div class="chipbar" id="chipBar"></div>
+    <div class="scroll" id="listScroll"><div id="gridWrap"></div></div>
+
+    <button class="fab" id="fabAdd" aria-label="新建菜谱">${svg('add', 26)}</button>
+    <button class="fab-mini" id="fabSort" aria-label="排序">${svg('sort', 19)}</button>
+  </div>`;
+}
+
+/** 搜索词数组，多处要用（过滤、相关度、高亮、命中原因） */
+function searchWords() {
+  return state.keyword.trim().toLowerCase().split(/\s+/).filter(Boolean);
+}
+
+/** 命中片段标成品牌色 */
+function highlight(text, words) {
+  if (!words.length || !text) return esc(text);
+  let out = esc(text);
+  for (const w of words) {
+    const e = esc(w).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    out = out.replace(new RegExp(`(${e})`, 'gi'), '<mark>$1</mark>');
+  }
+  return out;
+}
+
+function cardHTML(r) {
+  const words = searchWords();
+  const name = r.name || '未命名';
+
+  let meta = [
+    DIFF[(r.difficulty || 1) - 1],
+    r.minutes > 0 ? `${r.minutes}分钟` : null,
+    r.servings > 0 ? `${r.servings}人份` : null,
+  ].filter(Boolean).join(' · ');
+
+  // 菜名没含搜索词但被搜出来，多半是食材命中——告诉用户原因，
+  // 不然搜「土豆」冒出腊肉焖饭会像出了 bug
+  const nameHit = !words.length || words.some((w) => name.toLowerCase().includes(w));
+  if (!nameHit) {
+    const ing = (r.ingredients || []).find((i) =>
+      words.some((w) => ((i.n || '') + ' ' + (i.a || '')).toLowerCase().includes(w)));
+    meta = `${ing ? `食材含「${ing.n}」` : '描述命中'} · ${meta}`;
+  }
+
+  return `
+  <div class="card" data-id="${r.id}">
+    <div class="cover">
+      ${r.cover ? `<img data-img="${esc(r.cover)}" alt="" style="display:none">` : ''}
+      <span class="ph">${strokeIcon(ICON_BOWL, 32, 1.5)}</span>
+      <span class="badge">${esc(catLabel(r.category))}</span>
+    </div>
+    <div class="body">
+      <div class="name">${highlight(name, words)}</div>
+      <div class="meta">${esc(meta)}</div>
+    </div>
+  </div>`;
+}
+
+function renderChips() {
+  const bar = $('#chipBar');
+  if (!bar) return;
+  const items = [{ key: null, label: '全部' }, ...CATEGORIES];
+  bar.innerHTML = items.map((c) =>
+    `<button class="chip ${state.category === c.key ? 'on' : ''}" data-cat="${c.key ?? ''}">${c.label}</button>`
+  ).join('');
+
+  bar.onclick = (e) => {
+    const btn = e.target.closest('.chip');
+    if (!btn) return;
+    state.category = btn.dataset.cat || null;
+    renderChips();
+    renderGrid();
+  };
+}
+
+function renderGrid() {
+  const wrap = $('#gridWrap');
+  if (!wrap) return;
+
+  const list = queryRecipes();
+  const sub = $('#listSub');
+  if (sub) {
+    sub.textContent = state.recipes.length ? `共 ${state.recipes.length} 道菜谱` : '记录每一次下厨的味道';
+  }
+
+  if (list.length === 0) {
+    const filtering = !!state.keyword.trim() || !!state.category;
+    wrap.innerHTML = `
+      <div class="empty">
+        <div class="box">${strokeIcon(ICON_BOWL, 44, 1.4)}</div>
+        <h3>${filtering ? '没有找到菜谱' : '还没有菜谱'}</h3>
+        <p>${filtering ? '换个关键词或分类试试' : '把拿手好菜记下来，下次照着做'}</p>
+        ${filtering ? '' : '<button class="btn" id="emptyAdd">添加第一道菜</button>'}
+      </div>`;
+    const btn = $('#emptyAdd');
+    if (btn) btn.onclick = () => openEditor(null, 'list');
+    return;
+  }
+
+  wrap.innerHTML = `<div class="grid">${list.map(cardHTML).join('')}</div>`;
+  hydrateImages(wrap);
+
+  wrap.onclick = (e) => {
+    const card = e.target.closest('.card');
+    if (card) showDetail(Number(card.dataset.id));
+  };
+}
+
+function showList(transition = 'left') {
+  root.innerHTML = listView();
+  const view = $('.view', root);
+  view.classList.remove('enter-left');
+  if (transition === 'right') view.classList.add('enter-right');
+
+  renderChips();
+  renderGrid();
+
+  const input = $('#searchInput');
+  const doSearch = debounce(() => {
+    state.keyword = input.value;
+    countSearchHits(state.keyword);
+    renderGrid();
+  }, 260);
+
+  input.addEventListener('input', () => {
+    $('#searchClear').classList.toggle('show', !!input.value);
+    doSearch();
+  });
+  input.addEventListener('keydown', (e) => { if (e.key === 'Enter') input.blur(); });
+
+  $('#searchClear').onclick = () => {
+    input.value = '';
+    state.keyword = '';
+    state.lastCountedKw = null;
+    $('#searchClear').classList.remove('show');
+    renderGrid();
+    input.focus();
+  };
+
+  $('#fabAdd').onclick = () => openEditor(null, 'list');
+  $('#btnExport').onclick = doExport;
+  $('#btnImport').onclick = () => pickImportFile();
+  $('#fabSort').onclick = showSortMenu;
+}
+
+function showSortMenu() {
+  const old = $('.menu');
+  if (old) { old.remove(); return; }
+
+  const menu = document.createElement('div');
+  menu.className = 'menu';
+  const opts = [
+    { key: 'recent', label: '最近更新' },
+    { key: 'name', label: '按菜名' },
+    { key: 'usage', label: '使用最多' },
+  ];
+  menu.innerHTML = opts.map((o) =>
+    `<button data-sort="${o.key}" class="${state.sort === o.key ? 'on' : ''}">
+       <span>${o.label}</span>${state.sort === o.key ? svg('check', 16) : ''}
+     </button>`).join('')
+    + '<div class="menu-sep"></div>'
+    + '<button data-act="games" class="menu-game"><span>🎮 放松一下</span></button>';
+
+  $('.view', root).appendChild(menu);
+
+  menu.onclick = (e) => {
+    const game = e.target.closest('button[data-act="games"]');
+    if (game) {
+      menu.remove();
+      showGames();
+      return;
+    }
+    const btn = e.target.closest('button[data-sort]');
+    if (!btn) return;
+    state.sort = btn.dataset.sort;
+    try { localStorage.setItem('zuocai_sort', state.sort); } catch { /* 忽略 */ }
+    menu.remove();
+    renderGrid();
+  };
+
+  setTimeout(() => {
+    const close = (ev) => {
+      if (!menu.contains(ev.target) && ev.target.id !== 'fabSort') {
+        menu.remove();
+        document.removeEventListener('click', close);
+      }
+    };
+    document.addEventListener('click', close);
+  }, 0);
+}
+
+// ---------------------------------------------------------------- 小游戏
+
+const GAME_ICONS = {
+  snake: '<path d="M5 6h8a3 3 0 0 1 0 6H9a3 3 0 0 0 0 6h9"/><circle cx="18.5" cy="6.5" r="1.6"/>',
+  tetris: '<rect x="4" y="4" width="6" height="6" rx="1.2"/><rect x="10" y="10" width="6" height="6" rx="1.2"/><rect x="14" y="4" width="6" height="6" rx="1.2"/><rect x="8" y="16" width="6" height="4" rx="1.2"/>',
+  box: '<rect x="4.5" y="7" width="15" height="12" rx="2"/><path d="M4.5 11h15M12 7v12"/>',
+  plane: '<path d="M12 3.2c.9 0 1.6 1.3 1.6 3.2v2.3l5.5 3.2c.6.35.9.8.9 1.5v1.2l-6.4-1.9v3.6l1.8 1.4v1.2L12 18.1l-3.4 1.9v-1.2l1.8-1.4v-3.6l-6.4 1.9v-1.2c0-.7.3-1.15.9-1.5l5.5-3.2V6.4c0-1.9.7-3.2 1.6-3.2z"/>',
+  tank: '<rect x="4" y="10" width="16" height="8" rx="2.5"/><path d="M11 10V6h5"/><circle cx="8" cy="19.5" r="1.4"/><circle cx="16" cy="19.5" r="1.4"/>',
+};
+
+function gameIcon(name, size = 26) {
+  return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none"
+    stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"
+    aria-hidden="true">${GAME_ICONS[name] || GAME_ICONS.box}</svg>`;
+}
+
+const bestKey = (k) => 'zuocai_best_' + k;
+const getBest = (k) => Number(localStorage.getItem(bestKey(k)) || 0);
+const setBest = (k, v) => localStorage.setItem(bestKey(k), String(v));
+
+function showGames() {
+  // 清掉可能残留的结算遮罩（例如中途退出）
+  phone.querySelectorAll('.mask').forEach((m) => m.remove());
+  const meta = window.Games.META;
+  root.innerHTML = `
+  <div class="view enter-right">
+    <div class="edit-top">
+      <button class="icon-btn" id="gamesBack" aria-label="返回">${svg('back', 21)}</button>
+      <div class="title">放松一下</div>
+      <span style="width:40px"></span>
+    </div>
+    <div class="scroll">
+      <div class="games-body">
+        <div class="games-intro">写菜谱累了就玩两分钟。分数只存在本机。</div>
+        ${meta.map((g) => {
+          const best = getBest(g.key);
+          return `
+          <button class="game-card" data-key="${g.key}">
+            <span class="game-ico">${gameIcon(g.icon)}</span>
+            <span class="game-info">
+              <span class="game-name">${g.name}</span>
+              <span class="game-desc">${g.desc}</span>
+            </span>
+            <span class="game-best">${best > 0 ? '最高 ' + best : ''}</span>
+            ${svg('chevron', 18)}
+          </button>`;
+        }).join('')}
+      </div>
+    </div>
+  </div>`;
+
+  $('#gamesBack').onclick = () => showList('left');
+  root.querySelectorAll('.game-card').forEach((c) => {
+    c.onclick = () => openGame(c.dataset.key);
+  });
+}
+
+// ------------------------------------------------ 游戏反馈：音效 + 震动
+
+// 音效用 WebAudio 现场合成，不加载任何音频文件；震动用 navigator.vibrate。
+// 事件名与 Android 端 Game.drainEvents 的约定一致。
+const GameAudio = (() => {
+  let actx = null;
+  function ctx() {
+    if (!actx) {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (AC) actx = new AC();
+    }
+    if (actx && actx.state === 'suspended') actx.resume();
+    return actx;
+  }
+  function tone(freq, dur, type, vol, slideTo) {
+    const a = ctx();
+    if (!a) return;
+    const o = a.createOscillator();
+    const g = a.createGain();
+    o.type = type || 'triangle';
+    o.frequency.setValueAtTime(freq, a.currentTime);
+    if (slideTo) o.frequency.linearRampToValueAtTime(slideTo, a.currentTime + dur);
+    g.gain.setValueAtTime(vol, a.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, a.currentTime + dur);
+    o.connect(g).connect(a.destination);
+    o.start();
+    o.stop(a.currentTime + dur);
+  }
+  function noise(dur, vol) {
+    const a = ctx();
+    if (!a) return;
+    const len = Math.floor(a.sampleRate * dur);
+    const buf = a.createBuffer(1, len, a.sampleRate);
+    const d = buf.getChannelData(0);
+    let last = 0;
+    for (let i = 0; i < len; i++) {
+      last = last * 0.72 + (Math.random() * 2 - 1) * 0.28;
+      d[i] = last;
+    }
+    const src = a.createBufferSource();
+    const g = a.createGain();
+    g.gain.setValueAtTime(vol, a.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, a.currentTime + dur);
+    src.buffer = buf;
+    src.connect(g).connect(a.destination);
+    src.start();
+  }
+  const table = {
+    shoot: () => tone(880, 0.07, 'square', 0.08, 380),
+    hit: () => { noise(0.06, 0.12); tone(500, 0.06, 'triangle', 0.14, 700); },
+    boom: () => { tone(160, 0.42, 'triangle', 0.3, 60); noise(0.4, 0.3); },
+    hurt: () => { tone(320, 0.09, 'square', 0.2, 0); setTimeout(() => tone(220, 0.13, 'square', 0.2, 0), 90); },
+    eat: () => { tone(660, 0.055, 'triangle', 0.2, 0); setTimeout(() => tone(990, 0.075, 'triangle', 0.2, 0), 55); },
+    line: () => [523, 659, 784, 1047].forEach((f, i) => setTimeout(() => tone(f, 0.09, 'triangle', 0.22, 0), i * 60)),
+    drop: () => { tone(200, 0.11, 'triangle', 0.25, 110); noise(0.09, 0.2); },
+    push: () => { noise(0.07, 0.15); tone(240, 0.07, 'triangle', 0.18, 300); },
+    win: () => [523, 659, 784, 1047].forEach((f, i) => setTimeout(() => tone(f, 0.09, 'triangle', 0.24, 0), i * 90)),
+    over: () => [523, 392, 262].forEach((f, i) => setTimeout(() => tone(f, 0.16, 'triangle', 0.24, 0), i * 160)),
+  };
+  return { play(name) { try { (table[name] || (() => {}))(); } catch { /* 忽略 */ } } };
+})();
+
+function buzz(pattern) {
+  try { if (navigator.vibrate) navigator.vibrate(pattern); } catch { /* 忽略 */ }
+}
+
+// 事件 → 音效 + 震动强度
+const GAME_FX = {
+  shoot: null, hit: null, eat: null, line: null, win: null,
+  boom: 32, hurt: 48, drop: 20, push: 16, over: [40, 70, 40, 70, 90],
+};
+
+function playGameEvents(events) {
+  if (!events || !events.length) return;
+  for (const name of events) {
+    GameAudio.play(name);
+    const v = GAME_FX[name];
+    if (v) buzz(v);
+  }
+}
+
+let gameRaf = null;
+let gameInst = null;
+let gameKey = null;
+
+function stopGame() {
+  if (gameRaf) cancelAnimationFrame(gameRaf);
+  gameRaf = null;
+  gameInst = null;
+}
+
+function openGame(key) {
+  const meta = window.Games.META.find((g) => g.key === key);
+  if (!meta) return;
+  phone.querySelectorAll('.mask').forEach((m) => m.remove());
+  stopGame();
+
+  gameKey = key;
+  root.innerHTML = `
+  <div class="view enter-right game-view">
+    <div class="game-top">
+      <button class="icon-btn" id="gameBack" aria-label="返回">${svg('back', 21)}</button>
+      <div class="game-head">
+        <div class="game-title">${meta.name}</div>
+        <div class="game-sub" id="gameLabel">${meta.hint}</div>
+      </div>
+      <div class="game-score pill"><span>本局</span><b id="gameScore">0</b></div>
+      <div class="game-score pill ghost"><span>最高</span><b id="gameBest">0</b></div>
+    </div>
+
+    <div class="game-stage" id="gameStage">
+      <canvas id="gameCanvas"></canvas>
+    </div>
+
+    <div class="game-pad">
+      <div class="dpad">
+        <button class="pad-btn up" data-k="up" aria-label="上"><i class="pad-ic up">${svg('chevron', 24)}</i></button>
+        <button class="pad-btn left" data-k="left" aria-label="左"><i class="pad-ic left">${svg('chevron', 24)}</i></button>
+        <button class="pad-btn right" data-k="right" aria-label="右"><i class="pad-ic right">${svg('chevron', 24)}</i></button>
+        <button class="pad-btn down" data-k="down" aria-label="下"><i class="pad-ic down">${svg('chevron', 24)}</i></button>
+      </div>
+      <div class="acts">
+        <button class="act-btn" data-k="a">A</button>
+        <button class="act-btn alt" data-k="b">B</button>
+      </div>
+    </div>
+  </div>`;
+
+  $('#gameBack').onclick = () => { saveBestIfBetter(key); stopGame(); showGames(); };
+
+  const canvas = $('#gameCanvas');
+  const stage = $('#gameStage');
+  const scoreEl = $('#gameScore');
+  const labelEl = $('#gameLabel');
+
+  gameInst = window.Games.create(key);
+  if (!gameInst) { showGames(); return; }
+
+  let ctx = null;
+  let W = 0;
+  let H = 0;
+
+  function fit() {
+    const rect = stage.getBoundingClientRect();
+    const dpr = Math.min(3, window.devicePixelRatio || 1);
+    W = Math.max(120, Math.floor(rect.width));
+    H = Math.max(120, Math.floor(rect.height));
+    canvas.width = Math.round(W * dpr);
+    canvas.height = Math.round(H * dpr);
+    canvas.style.width = W + 'px';
+    canvas.style.height = H + 'px';
+    ctx = canvas.getContext('2d');
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    gameInst.resize(W, H);
+  }
+
+  // 等一帧，等布局算完再量尺寸
+  requestAnimationFrame(() => {
+    fit();
+    gameInst.reset();
+    let last = performance.now();
+
+    function tick(t) {
+      const dt = Math.min(60, t - last);
+      last = t;
+
+      gameInst.update(dt);
+      playGameEvents(gameInst.state.events);
+      if (gameInst.state.events) gameInst.state.events.length = 0;
+      gameInst.render(ctx, W, H);
+
+      scoreEl.textContent = gameInst.state.score;
+      labelEl.textContent = gameInst.state.label || meta.hint;
+
+      if (gameInst.state.over) {
+        const bestEl = $('#gameBest');
+        if (bestEl) {
+          bestEl.textContent = Math.max(Number(bestEl.textContent) || 0, gameInst.state.score || 0);
+        }
+        finishGame(key, meta.name, gameInst.state.score);
+        return;
+      }
+      gameRaf = requestAnimationFrame(tick);
+    }
+    gameRaf = requestAnimationFrame(tick);
+  });
+
+  // 虚拟按键：按住连续触发
+  root.querySelectorAll('[data-k]').forEach((btn) => {
+    const action = btn.dataset.k;
+    let timer = null;
+    let delay = null;
+
+    const fire = (e) => {
+      e.preventDefault();
+      if (!gameInst) return;
+      gameInst.input(action);
+    };
+    const start = (e) => {
+      buzz(14);
+      fire(e);
+      delay = setTimeout(() => {
+        timer = setInterval(() => { if (gameInst) gameInst.input(action); }, 95);
+      }, 280);
+    };
+    const stop = () => {
+      clearTimeout(delay);
+      clearInterval(timer);
+      timer = null;
+    };
+
+    btn.addEventListener('pointerdown', start);
+    btn.addEventListener('pointerup', stop);
+    btn.addEventListener('pointercancel', stop);
+    btn.addEventListener('pointerleave', stop);
+    btn.addEventListener('contextmenu', (e) => e.preventDefault());
+  });
+
+  // 键盘
+  const keyMap = {
+    ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right',
+    w: 'up', s: 'down', a: 'left', d: 'right',
+    ' ': 'a', z: 'a', x: 'b', j: 'b', k: 'a',
+  };
+  const onKey = (e) => {
+    const act = keyMap[e.key];
+    if (!act || !gameInst) return;
+    e.preventDefault();
+    gameInst.input(act);
+  };
+  document.addEventListener('keydown', onKey);
+  // 离开游戏页时把监听摘掉
+  const cleanup = () => document.removeEventListener('keydown', onKey);
+  const backBtn = $('#gameBack');
+  const prevBack = backBtn.onclick;
+  backBtn.onclick = () => { saveBestIfBetter(key); cleanup(); stopGame(); showGames(); };
+  void prevBack;
+
+  // 窗口尺寸变化（旋转屏幕 / 拖窗口）
+  const onResize = () => {
+    if (!gameInst) return;
+    const before = { score: gameInst.state.score };
+    fit();
+    gameInst.state.score = before.score;
+  };
+  window.addEventListener('resize', onResize);
+}
+
+/** 中途退出也要记住最高分，否则玩得再高也白费 */
+function saveBestIfBetter(key) {
+  if (!gameInst) return;
+  const s = gameInst.state.score || 0;
+  if (s > getBest(key)) setBest(key, s);
+}
+
+function finishGame(key, name, score) {
+  const prev = getBest(key);
+  const isNew = score > prev;
+  if (isNew) setBest(key, score);
+  stopGame();
+
+  const mask = document.createElement('div');
+  mask.className = 'mask';
+  mask.innerHTML = `
+    <div class="dialog gameover">
+      <h4>${isNew ? '新纪录！' : '本局结束'}</h4>
+      <p>${name}　得分 <b>${score}</b>${isNew || prev <= 0 ? '' : `<br>最高分 ${prev}`}</p>
+      <div class="acts">
+        <button class="primary" id="goAgain">再来一局</button>
+        <button id="goBack">返回游戏列表</button>
+      </div>
+    </div>`;
+  phone.appendChild(mask);
+
+  mask.querySelector('#goAgain').onclick = () => {
+    mask.remove();
+    openGame(key);
+  };
+  mask.querySelector('#goBack').onclick = () => {
+    mask.remove();
+    showGames();
+  };
+}
+
+// ---------------------------------------------------------------- 详情页
+
+// 做法切换状态：detailVariant = -1 表示原做法
+let detailId = null;
+let detailVariant = -1;
+let detailPending = null;   // 生成好、还没保存的做法
+
+function showDetail(id, transition = 'right') {
+  const r = state.recipes.find((x) => x.id === id);
+  if (!r) { showList(); return; }
+
+  if (detailId !== id) { detailVariant = -1; detailPending = null; }
+  detailId = id;
+
+  bumpUsage(r, 'openCount');
+
+  const variants = r.variants || [];
+  if (detailVariant >= variants.length) detailVariant = -1;
+
+  const previewing = !!detailPending;
+  const shown = detailPending || variants[detailVariant] || null;
+
+  const meta = [];
+  if (r.minutes > 0) meta.push(`<span class="meta-item">${strokeIcon(ICON_CLOCK, 14)}${r.minutes}分钟</span>`);
+  if (r.servings > 0) meta.push(`<span class="meta-item">${strokeIcon(ICON_USER, 14)}${r.servings}人份</span>`);
+  meta.push(`<span class="meta-item">${svg2(ICON_FLAME, 14)}${DIFF[(r.difficulty || 1) - 1]}</span>`);
+
+  const ings = ((shown && shown.ingredients) || r.ingredients || []).filter((i) => i.n || i.a);
+  const steps = ((shown && shown.steps) || r.steps || []).filter((s) => s && s.trim());
+  const desc = ((shown ? shown.description : r.description) || '').trim();
+
+  const labels = ['原做法'].concat(variants.map((v) => v.label || '做法'));
+  const chipRow = (!previewing && variants.length)
+    ? `<div class="chipbar wrap" id="variantRow">${labels.map((label, i) =>
+        `<button class="chip ${i - 1 === detailVariant ? 'on' : ''}" data-v="${i - 1}">${esc(label)}</button>`
+      ).join('')}</div>`
+    : '';
+
+  root.innerHTML = `
+  <div class="view enter-right">
+    <div class="scroll">
+      <div style="padding-bottom:${previewing ? 132 : 32}px">
+        <div class="detail-cover">
+          ${r.cover ? `<img data-img="${esc(r.cover)}" alt="" style="display:none">` : ''}
+          <span class="ph">${strokeIcon(ICON_BOWL, 58, 1.3)}</span>
+        </div>
+
+        <div class="sheet">
+          <h2>${esc(r.name || '未命名')}</h2>
+          <div class="info-row">
+            <span class="pill">${esc(catLabel(r.category))}</span>
+            ${meta.join('')}
+          </div>
+          ${chipRow}
+          <div class="desc ${desc ? '' : 'muted'}">${esc(desc || '暂无描述')}</div>
+
+          ${ings.length ? `
+            <hr class="sep">
+            <h3 class="sec-title">食材清单</h3>
+            <div>${ings.map((i) => `
+              <div class="ing">
+                <span class="dot"></span>
+                <span class="n">${esc(i.n || '—')}</span>
+                <span class="a">${esc(i.a || '')}</span>
+              </div>`).join('')}</div>` : ''}
+
+          ${steps.length ? `
+            <hr class="sep">
+            <h3 class="sec-title">做法步骤</h3>
+            <div>${steps.map((s, idx) => `
+              <div class="step">
+                <span class="num">${idx + 1}</span>
+                <span class="txt">${esc(s)}</span>
+              </div>`).join('')}</div>` : ''}
+        </div>
+      </div>
+    </div>
+
+    <button class="circle-btn left" id="btnBack" aria-label="返回">${svg('back', 21)}</button>
+    ${previewing ? '' : `<button class="circle-btn right" id="btnEdit" aria-label="编辑">${svg('edit', 19)}</button>`}
+    ${previewing ? '' : `<button class="circle-btn right" id="btnAi" style="right:68px" aria-label="换个做法">${svg('spark', 19)}</button>`}
+
+    ${previewing ? `
+      <div class="preview-bar">
+        <div class="preview-title">预览 · 还没保存</div>
+        <div class="preview-acts">
+          <button class="btn-ghost" id="pvDiscard">放弃</button>
+          <button class="btn-primary" id="pvSave">保存为做法</button>
+        </div>
+      </div>` : ''}
+  </div>`;
+
+  hydrateImages(root);
+
+  $('#btnBack').onclick = () => {
+    if (previewing) { detailPending = null; showDetail(id); return; }
+    detailId = null;
+    showList('left');
+  };
+  if ($('#btnEdit')) $('#btnEdit').onclick = () => openEditor(id, 'detail');
+  if ($('#btnAi')) $('#btnAi').onclick = () => askMissing(id);
+  if ($('#variantRow')) {
+    $('#variantRow').onclick = (e) => {
+      const btn = e.target.closest('button[data-v]');
+      if (!btn) return;
+      detailVariant = Number(btn.dataset.v);
+      showDetail(id);
+    };
+  }
+  if ($('#pvDiscard')) $('#pvDiscard').onclick = () => { detailPending = null; showDetail(id); };
+  if ($('#pvSave')) $('#pvSave').onclick = () => saveVariant(id);
+}
+
+/** 当前看到的那一版 → 文本，交给 AI 当底稿 */
+function variantBaseText(r) {
+  const shown = detailPending || (r.variants || [])[detailVariant] || null;
+  if (!shown) return P.stringifyRecipe(r);
+  return P.stringifyRecipe({
+    ...r,
+    description: shown.description || '',
+    ingredients: shown.ingredients || [],
+    steps: shown.steps || [],
+  });
+}
+
+/** 点「换个做法」：问缺什么，交给 AI 出一版替代方案 */
+async function askMissing(id) {
+  const r = state.recipes.find((x) => x.id === id);
+  if (!r) return;
+
+  const cfg = getApi();
+  if (proxy.on) {
+    if (!proxy.configured) {
+      await dialog({
+        title: '服务端还没配置 Key',
+        message: '请编辑 web/config.local.json 填写 api_key，然后重启本地服务。',
+        actions: [{ label: '知道了', value: true, style: 'primary' }],
+      });
+      return;
+    }
+  } else if (!cfg.key) {
+    const go = await dialog({
+      title: '还没配置大模型',
+      message: '需要填一个 API Key 才能生成替代方案。',
+      actions: [
+        { label: '暂不', value: false },
+        { label: '去配置', value: true, style: 'primary' },
+      ],
+    });
+    if (go) openSettings(() => showDetail(id));
+    return;
+  }
+
+  const request = await askText({
+    title: '缺什么食材？',
+    message: '说清楚手头的情况，AI 会按现有做法给一版替代方案。',
+    placeholder: '例：没有大蒜 / 不吃辣 / 只有一个空气炸锅',
+    okLabel: '生成',
+  });
+  if (!request) return;
+
+  const modelName = proxy.on ? proxy.model : cfg.model;
+  const mask = document.createElement('div');
+  mask.className = 'mask';
+  mask.innerHTML = `
+    <div class="dialog">
+      <h4>正在生成替代方案</h4>
+      <p>调用 ${esc(modelName)}，通常需要 3–15 秒。</p>
+      <div class="loading"><span></span><span></span><span></span></div>
+    </div>`;
+  phone.appendChild(mask);
+
+  try {
+    const text = await callLLM(buildVariantPrompt(variantBaseText(r), request));
+    mask.remove();
+    const parsed = P.parseRecipe(text);
+    if (!parsed.ok) throw new Error(parsed.hints[0] || '没识别出菜谱内容');
+    detailVariant = -1;
+    detailPending = {
+      label: request.replace(/\s+/g, ' ').slice(0, 12),
+      description: parsed.tips || '',
+      ingredients: parsed.ingredients || [],
+      steps: parsed.steps || [],
+      createdAt: Date.now(),
+    };
+    showDetail(id);
+  } catch (err) {
+    mask.remove();
+    await dialog({
+      title: '生成失败',
+      message: friendlyError(String(err && err.message ? err.message : err)),
+      actions: [{ label: '知道了', value: true, style: 'primary' }],
+    });
+  }
+}
+
+function buildVariantPrompt(recipeText, request) {
+  return `你是一位专业中餐厨师。下面是同一道菜现有的做法，用户临时缺东西或条件变了，请给出一份仍然好吃的替代方案。
+
+【现有做法】
+${recipeText}
+
+【用户的情况】
+${request}
+
+只输出改好后的菜谱正文，不要开场白、解释或结尾。严格照现有做法的格式：
+
+# 菜名
+### 食材
+...
+### 步骤
+1. ...
+> 小贴士：...
+
+要求：
+- 第一行沿用原菜名，不要加「改良版」「替代版」这类后缀
+- 只改受影响的部分，其他食材和步骤尽量保持原样
+- 缺的食材直接换成替代品，并在小贴士里说明替代后口感有什么变化
+- 步骤 3–6 步，写清火候和时间`;
+}
+
+async function saveVariant(id) {
+  const r = state.recipes.find((x) => x.id === id);
+  const v = detailPending;
+  if (!r || !v) return;
+  r.variants = (r.variants || []).concat([v]);
+  await dbPut(r);
+  detailVariant = r.variants.length - 1;
+  detailPending = null;
+  showDetail(id);
+  toast('已保存，可在顶部切换做法');
+}
+
+/** 单行文本输入弹窗 */
+function askText({ title, message, placeholder, okLabel = '确定' }) {
+  return new Promise((resolve) => {
+    const mask = document.createElement('div');
+    mask.className = 'mask';
+    mask.innerHTML = `
+      <div class="dialog">
+        <h4>${esc(title)}</h4>
+        <p>${esc(message || '')}</p>
+        <input class="field" id="askTextInput" placeholder="${esc(placeholder || '')}" maxlength="40" autocomplete="off">
+        <div class="acts" style="margin-top:14px">
+          <button data-v="0">取消</button>
+          <button data-v="1" class="primary">${esc(okLabel)}</button>
+        </div>
+      </div>`;
+    phone.appendChild(mask);
+    const input = $('#askTextInput', mask);
+    setTimeout(() => input.focus(), 60);
+    const done = (v) => { mask.remove(); resolve(v); };
+    mask.addEventListener('click', (e) => {
+      const b = e.target.closest('button[data-v]');
+      if (b) done(b.dataset.v === '1' ? input.value.trim() : '');
+      else if (e.target === mask) done('');
+    });
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') done(input.value.trim());
+    });
+  });
+}
+
+// ---------------------------------------------------------------- 编辑页
+
+function editorView(d) {
+  return `
+  <div class="view enter-right">
+    <div class="edit-top">
+      <button class="icon-btn" id="btnClose" aria-label="关闭">${svg('close', 22)}</button>
+      <div class="title" id="editTitle">${d.id ? '编辑菜谱' : '新建菜谱'}</div>
+      <button class="btn-primary" id="btnSave">保存</button>
+    </div>
+
+    <div class="scroll">
+      <div class="edit-body">
+
+        <div class="write-card">
+          <textarea id="recipeText" spellcheck="false" placeholder="${esc(PLACEHOLDER)}"></textarea>
+        </div>
+
+        <div class="parse-bar" id="parseBar">
+          <span class="parse-dot" id="parseDot"></span>
+          <span class="parse-msg" id="parseMsg">等待输入…</span>
+          <button class="parse-toggle" id="parseToggle" hidden>预览</button>
+        </div>
+
+        <div class="parse-preview" id="parsePreview" hidden></div>
+
+        <div class="ai-row">
+          <button class="ai-btn" id="aiBtn">
+            ${svg('spark', 17)}<span>用 AI 写一道菜</span>
+          </button>
+          <button class="icon-btn subtle" id="btnConfig" aria-label="设置">${svg('setting', 20)}</button>
+        </div>
+
+        <div class="opt-block">
+          <div class="label">分类</div>
+          <div class="chipbar wrap" id="catBar" style="padding:0"></div>
+        </div>
+
+        <div class="opt-block">
+          <div class="label">封面（选填）</div>
+          <div class="cover-strip">
+            <div class="cover-thumb ${d.cover ? 'has-img' : ''}" id="coverPick">
+              <img id="coverImg" alt="" style="display:none"${d.cover ? ` data-img="${esc(d.cover)}"` : ''}>
+              <span class="ph"${d.cover ? ' style="display:none"' : ''}>${strokeIcon(ICON_PHOTO, 24, 1.6)}</span>
+            </div>
+            <button class="cover-clear" id="coverClear" ${d.cover ? '' : 'hidden'}>移除封面</button>
+          </div>
+        </div>
+
+        <details class="more">
+          <summary>更多选项（人份 / 时长 / 难度）</summary>
+          <div class="row-3">
+            <div>
+              <div class="label">人份</div>
+              <input class="field" id="fServ" type="number" inputmode="numeric" min="0" max="99" value="${d.servings || ''}">
+            </div>
+            <div>
+              <div class="label">分钟</div>
+              <input class="field" id="fMin" type="number" inputmode="numeric" min="0" max="9999" value="${d.minutes || ''}">
+            </div>
+            <div>
+              <div class="label">难度</div>
+              <div class="field pick" id="fDiff">${DIFF[(d.difficulty || 1) - 1]}</div>
+            </div>
+          </div>
+        </details>
+
+        ${d.id ? `<button class="danger-btn" id="btnDelete">删除这道菜谱</button>` : ''}
+      </div>
+    </div>
+
+    <input type="file" id="fileInput" accept="image/*" hidden>
+  </div>`;
+}
+
+function openEditor(id, from) {
+  const origin = id ? state.recipes.find((r) => r.id === id) : null;
+  state.editId = origin ? origin.id : null;
+  state.editFrom = from || 'list';
+  state.draft = origin ? clone(origin) : newRecipe();
+  state.dirty = false;
+  state.userPickedCat = !!origin;
+
+  renderEditor();
+}
+
+function renderEditor() {
+  const d = state.draft;
+  root.innerHTML = editorView(d);
+
+  const ta = $('#recipeText');
+  ta.value = d.id ? P.stringifyRecipe(d) : '';
+  autoGrow(ta);
+
+  renderCatBar();
+  if (d.cover) hydrateImages(root);
+  bindEditorEvents();
+  runParse();
+  updateCoverUI();
+}
+
+async function pickCoverSource(fileInput) {
+  const has = !!state.draft.cover;
+  const actions = [
+    { label: '🔍 从网络找图', value: 'search' },
+    { label: '从相册选择', value: 'upload' },
+    { label: '✨ 用 AI 生成', value: 'ai' },
+  ];
+  if (has) actions.push({ label: '移除封面', value: 'remove', style: 'danger' });
+  actions.push({ label: '取消', value: null });
+
+  const v = await dialog({ title: '封面', message: has ? '当前已有封面' : '还没有封面', actions });
+  if (v === 'search') openImageSearch();
+  else if (v === 'upload') fileInput.click();
+  else if (v === 'ai') generateCover();
+  else if (v === 'remove') {
+    const old = state.draft.cover;
+    state.draft.cover = null;
+    if (old) { await imgDel(old); urlCache.delete(old); }
+    state.dirty = true;
+    updateCoverUI();
+  }
+}
+
+/* ---------------------------------------------------------------- 网络搜图 */
+
+/**
+ * 搜图面板：先按菜名搜一次，用户从候选缩略图里挑一张，
+ * 点中的原图下载回来后居中裁成 4:3 存为封面。
+ */
+async function openImageSearch() {
+  if (!proxy.on) {
+    await dialog({
+      title: '需要本地服务',
+      message: '搜图要经过本地服务转发（Bing 搜索页没有跨域头，原图站点还有防盗链）。请用「启动预览.bat」打开，或访问 http://127.0.0.1:8765。',
+      actions: [{ label: '知道了', value: true, style: 'primary' }],
+    });
+    return;
+  }
+
+  const parsed = P.parseRecipe($('#recipeText').value);
+  const preset = (parsed.name || '').trim();
+
+  const mask = document.createElement('div');
+  mask.className = 'mask sheet';
+  mask.innerHTML = `
+    <div class="picker">
+      <div class="picker-top">
+        <div class="picker-title">从网络找图</div>
+        <button class="icon-btn" id="pkClose" aria-label="关闭">${svg('close', 20)}</button>
+      </div>
+      <div class="picker-search">
+        <input id="pkInput" type="text" placeholder="输入菜名，例如 宫保鸡丁"
+               value="${esc(preset)}" autocomplete="off">
+        <button id="pkGo">搜索</button>
+      </div>
+      <div class="picker-body" id="pkBody">
+        <div class="picker-hint">输入菜名后点「搜索」。图来自公开网络，仅供参考。</div>
+      </div>
+    </div>`;
+  phone.appendChild(mask);
+
+  const input = $('#pkInput');
+  const body = $('#pkBody');
+
+  const close = () => mask.remove();
+  $('#pkClose').onclick = close;
+
+  let busy = false;
+  let page = 0;
+  let items = [];
+
+  function renderGrid() {
+    body.innerHTML = `<div class="picker-grid">${items.map((it, i) => `
+      <button class="pick-cell" data-i="${i}">
+        <img src="${it.thumb}" alt="">
+      </button>`).join('')}</div>
+      <button class="picker-more" id="pkMore">换一批</button>
+      <div class="picker-foot">共 ${items.length} 张，点一张设为封面（自动裁成 4:3）</div>`;
+
+    body.querySelectorAll('.pick-cell').forEach((cell) => {
+      cell.onclick = () => applyPickedImage(items[Number(cell.dataset.i)], mask, body);
+    });
+    $('#pkMore').onclick = () => doSearch(false);
+  }
+
+  async function doSearch(reset = true) {
+    const q = (input.value || '').trim();
+    if (!q || busy) return;
+    busy = true;
+
+    if (reset) {
+      page = 0;
+      items = [];
+      body.innerHTML = `<div class="picker-loading"><div class="loading"><span></span><span></span><span></span></div><div>正在搜索「${esc(q)}」…</div></div>`;
+    } else {
+      const more = $('#pkMore');
+      if (more) { more.disabled = true; more.textContent = '正在加载…'; }
+    }
+
+    try {
+      const res = await fetch('/api/search-image', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: q, count: 12, page }),
+      });
+      let j = {};
+      try { j = await res.json(); } catch { /* ignore */ }
+      if (!res.ok) throw new Error(j.error || ('HTTP ' + res.status));
+
+      const got = j.items || [];
+      if (!got.length) {
+        if (reset) {
+          body.innerHTML = `<div class="picker-hint">没有搜到「${esc(q)}」的图片。<br>换个更通用的菜名试试，比如去掉修饰词。</div>`;
+        } else {
+          const more = $('#pkMore');
+          if (more) { more.disabled = true; more.textContent = '没有更多了'; }
+        }
+        return;
+      }
+
+      // 追加时按 murl 去重，避免翻页重叠
+      const seen = new Set(items.map((x) => x.murl));
+      items = items.concat(got.filter((x) => !seen.has(x.murl)));
+      page += 1;
+      renderGrid();
+    } catch (err) {
+      body.innerHTML = `<div class="picker-hint">搜索失败：${esc(String(err.message || err))}</div>`;
+    } finally {
+      busy = false;
+    }
+  }
+
+  $('#pkGo').onclick = () => doSearch(true);
+  input.onkeydown = (e) => { if (e.key === 'Enter') doSearch(true); };
+
+  if (preset) doSearch(true);
+  else setTimeout(() => input.focus(), 60);
+}
+
+/** 下载选中的原图 → 裁 4:3 → 存为封面 */
+async function applyPickedImage(item, mask, body) {
+  body.innerHTML = `<div class="picker-loading"><div class="loading"><span></span><span></span><span></span></div><div>正在下载图片…</div></div>`;
+
+  try {
+    const res = await fetch('/api/fetch-image', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url: item.murl, referer: item.purl || 'https://cn.bing.com/' }),
+    });
+    let j = {};
+    try { j = await res.json(); } catch { /* ignore */ }
+    if (!res.ok) throw new Error(j.error || ('HTTP ' + res.status));
+
+    const blob = await cropToRatio(j.dataUrl, 4 / 3, 1600, 0.88);
+    const key = await storeBlob(blob);
+
+    const old = state.draft.cover;
+    state.draft.cover = key;
+    if (old) { await imgDel(old); urlCache.delete(old); }
+
+    state.dirty = true;
+    mask.remove();
+    updateCoverUI();
+    hydrateImages($('#coverPick'));
+    toast('封面已更新');
+  } catch (err) {
+    body.innerHTML = `<div class="picker-hint">图片下载失败：${esc(String(err.message || err))}<br><br>
+      有些站点会拦截下载，换一张试试。</div>`;
+  }
+}
+
+/** 居中裁切成固定比例，再压到指定长边 */
+function cropToRatio(dataUrl, ratio, maxEdge, quality) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      let sw = img.naturalWidth;
+      let sh = img.naturalHeight;
+      let cw = sw;
+      let ch = Math.round(sw / ratio);
+      if (ch > sh) {
+        ch = sh;
+        cw = Math.round(sh * ratio);
+      }
+      const sx = Math.round((sw - cw) / 2);
+      const sy = Math.round((sh - ch) / 2);
+
+      let ow = cw;
+      let oh = ch;
+      if (Math.max(cw, ch) > maxEdge) {
+        const k = maxEdge / Math.max(cw, ch);
+        ow = Math.round(cw * k);
+        oh = Math.round(ch * k);
+      }
+
+      const canvas = document.createElement('canvas');
+      canvas.width = ow;
+      canvas.height = oh;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, sx, sy, cw, ch, 0, 0, ow, oh);
+      canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('图片处理失败'))), 'image/jpeg', quality);
+    };
+    img.onerror = () => reject(new Error('图片解码失败'));
+    img.src = dataUrl;
+  });
+}
+
+async function generateCover() {
+  if (!proxy.on) {
+    await dialog({
+      title: '需要本地服务',
+      message: 'AI 生成图片要经过本地服务转发，请用「启动预览.bat」打开，或直接访问 http://127.0.0.1:8765。',
+      actions: [{ label: '知道了', value: true, style: 'primary' }],
+    });
+    return;
+  }
+
+  const parsed = P.parseRecipe($('#recipeText').value);
+  if (!parsed.name) {
+    toast('先写好菜名再生成图片');
+    return;
+  }
+
+  const ings = parsed.ingredients.slice(0, 3).map((i) => i.n).filter(Boolean).join('、');
+  const prompt = `一盘${parsed.name}${ings ? '，主要食材是' + ings : ''}，` +
+    '白色瓷盘盛装，暖色调，俯拍摄影，高清美食摄影，自然光，浅景深，画面中不要出现文字';
+
+  const mask = document.createElement('div');
+  mask.className = 'mask';
+  mask.innerHTML = `
+    <div class="dialog">
+      <h4>正在生成「${esc(parsed.name)}」的图片</h4>
+      <p>菜品图通常需要 10–30 秒。</p>
+      <div class="loading"><span></span><span></span><span></span></div>
+    </div>`;
+  phone.appendChild(mask);
+
+  try {
+    const res = await fetch('/api/image', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt }),
+    });
+    let j = {};
+    try { j = await res.json(); } catch { /* ignore */ }
+    if (!res.ok) throw new Error(j.error || ('HTTP ' + res.status));
+    if (!j.dataUrl) throw new Error('没有拿到图片数据');
+
+    const blob = await (await fetch(j.dataUrl)).blob();
+    const key = await storeBlob(blob);
+
+    const old = state.draft.cover;
+    state.draft.cover = key;
+    if (old) { await imgDel(old); urlCache.delete(old); }
+
+    state.dirty = true;
+    mask.remove();
+    updateCoverUI();
+    hydrateImages($('#coverPick'));
+    toast(j.watermarked ? '已生成（AI 图片带水印标识）' : '已生成');
+  } catch (err) {
+    mask.remove();
+    await dialog({
+      title: '生成图片失败',
+      message: String(err && err.message ? err.message : err),
+      actions: [{ label: '知道了', value: true, style: 'primary' }],
+    });
+  }
+}
+
+function autoGrow(ta) {
+  if (!ta) return;
+  ta.style.height = 'auto';
+  const limit = Math.round((phone.clientHeight || window.innerHeight) * 0.40);
+  const want = Math.max(200, ta.scrollHeight + 4);
+  ta.style.height = Math.min(want, Math.max(200, limit)) + 'px';
+  ta.style.overflowY = want > limit ? 'auto' : 'hidden';
+}
+
+function bindEditorEvents() {
+  const d = state.draft;
+  const ta = $('#recipeText');
+
+  ta.addEventListener('input', () => {
+    autoGrow(ta);
+    state.dirty = true;
+    parseSoon();
+    hidePreview();
+  });
+
+  $('#btnClose').onclick = tryCloseEditor;
+  $('#btnSave').onclick = saveDraft;
+
+  $('#parseToggle').onclick = () => {
+    const box = $('#parsePreview');
+    if (box.hidden) {
+      renderPreview();
+      box.hidden = false;
+      $('#parseToggle').textContent = '收起';
+    } else {
+      hidePreview();
+    }
+  };
+
+  $('#aiBtn').onclick = onAiClick;
+  $('#btnConfig').onclick = () => openSettings(renderEditor);
+
+  $('#fDiff').onclick = () => {
+    d.difficulty = (d.difficulty % 3) + 1;
+    $('#fDiff').textContent = DIFF[d.difficulty - 1];
+    state.dirty = true;
+  };
+
+  const fileInput = $('#fileInput');
+  $('#coverPick').onclick = () => pickCoverSource(fileInput);
+  fileInput.onchange = async () => {
+    const file = fileInput.files && fileInput.files[0];
+    fileInput.value = '';
+    if (!file) return;
+    try {
+      const old = d.cover;
+      d.cover = await storeImage(file);
+      if (old) { await imgDel(old); urlCache.delete(old); }
+      state.dirty = true;
+      updateCoverUI();
+      hydrateImages($('#coverPick'));
+    } catch { toast('图片读取失败'); }
+  };
+
+  $('#coverClear').onclick = async (e) => {
+    e.stopPropagation();
+    const old = d.cover;
+    d.cover = null;
+    if (old) { await imgDel(old); urlCache.delete(old); }
+    state.dirty = true;
+    updateCoverUI();
+  };
+
+  const del = $('#btnDelete');
+  if (del) {
+    del.onclick = async () => {
+      const ok = await dialog({
+        title: '删除这道菜谱？',
+        message: '删除后无法恢复。',
+        actions: [
+          { label: '取消', value: false },
+          { label: '删除', value: true, style: 'danger' },
+        ],
+      });
+      if (ok) await doDelete();
+    };
+  }
+
+  $('.view', root).addEventListener('input', (e) => {
+    if (e.target.matches('input.field')) state.dirty = true;
+  });
+}
+
+function updateCoverUI() {
+  const d = state.draft;
+  const picker = $('#coverPick');
+  const img = $('#coverImg');
+  const ph = $('.ph', picker);
+  const clear = $('#coverClear');
+
+  if (!d.cover) {
+    picker.classList.remove('has-img');
+    img.style.display = 'none';
+    img.removeAttribute('src');
+    img.removeAttribute('data-img');
+    if (ph) ph.style.display = '';
+    if (clear) clear.hidden = true;
+    return;
+  }
+  picker.classList.add('has-img');
+  if (ph) ph.style.display = 'none';
+  img.setAttribute('data-img', d.cover);
+  img.style.display = 'none';
+  if (clear) clear.hidden = false;
+}
+
+// ---------------------------------------------------------------- 解析
+
+let lastParsed = null;
+
+const parseSoon = debounce(() => runParse(), 300);
+
+function runParse() {
+  const text = $('#recipeText') ? $('#recipeText').value : '';
+  const parsed = P.parseRecipe(text);
+  lastParsed = parsed;
+
+  const dot = $('#parseDot');
+  const msg = $('#parseMsg');
+  const toggle = $('#parseToggle');
+
+  if (!text.trim()) {
+    dot.className = 'parse-dot idle';
+    msg.textContent = '等待输入…';
+    toggle.hidden = true;
+    return;
+  }
+
+  dot.className = 'parse-dot ' + (parsed.ok ? 'ok' : 'warn');
+
+  if (parsed.ok) {
+    const bits = [];
+    if (parsed.ingredients.length) bits.push(`${parsed.ingredients.length} 食材`);
+    if (parsed.steps.length) bits.push(`${parsed.steps.length} 步骤`);
+    msg.textContent = `${parsed.name} · ${bits.join(' · ')}`;
+    toggle.hidden = false;
+  } else {
+    msg.textContent = parsed.hints[0] || '没识别出内容，参考输入框里的示例格式';
+    toggle.hidden = true;
+  }
+
+  if (!state.userPickedCat) {
+    state.draft.category = parsed.category;
+    renderCatBar();
+  }
+}
+
+function renderPreview() {
+  const p = lastParsed;
+  const box = $('#parsePreview');
+  if (!p || !p.ok) { box.innerHTML = ''; return; }
+
+  box.innerHTML = `
+    <div class="pv-title">${esc(p.name)}</div>
+    <div class="pv-sec">食材 ${p.ingredients.length}</div>
+    <div class="pv-ings">
+      ${p.ingredients.map((i) => `
+        <span class="pv-ing">${esc(i.n || '—')}${i.a ? `<i>${esc(i.a)}</i>` : ''}</span>`).join('')}
+    </div>
+    <div class="pv-sec">步骤 ${p.steps.length}</div>
+    <ol class="pv-steps">${p.steps.map((s) => `<li>${esc(s)}</li>`).join('')}</ol>
+    ${p.tips ? `<div class="pv-tip">${esc(p.tips)}</div>` : ''}`;
+}
+
+function hidePreview() {
+  const box = $('#parsePreview');
+  if (!box) return;
+  box.hidden = true;
+  const t = $('#parseToggle');
+  if (t) t.textContent = '预览';
+}
+
+// ---------------------------------------------------------------- 分类条
+
+function renderCatBar() {
+  const bar = $('#catBar');
+  if (!bar) return;
+  const d = state.draft;
+  bar.innerHTML = CATEGORIES.map((c) =>
+    `<button class="chip ${d.category === c.key ? 'on' : ''}" data-cat="${c.key}">${c.label}</button>`
+  ).join('');
+  bar.onclick = (e) => {
+    const btn = e.target.closest('.chip');
+    if (!btn) return;
+    d.category = btn.dataset.cat;
+    state.userPickedCat = true;
+    state.dirty = true;
+    renderCatBar();
+  };
+}
+
+// ---------------------------------------------------------------- 保存
+
+async function tryCloseEditor() {
+  if (!state.dirty) { leaveEditor(); return; }
+  const discard = await dialog({
+    title: '放弃修改？',
+    message: '当前内容尚未保存。',
+    actions: [
+      { label: '继续编辑', value: false },
+      { label: '放弃', value: true, style: 'danger' },
+    ],
+  });
+  if (discard) {
+    const origin = state.recipes.find((r) => r.id === state.editId);
+    if (state.draft.cover && state.draft.cover !== (origin && origin.cover)) {
+      await imgDel(state.draft.cover);
+      urlCache.delete(state.draft.cover);
+    }
+    leaveEditor();
+  }
+}
+
+function leaveEditor() {
+  state.dirty = false;
+  if (state.editFrom === 'detail' && state.editId) showDetail(state.editId, 'left');
+  else showList('left');
+}
+
+async function saveDraft() {
+  const d = state.draft;
+  const parsed = P.parseRecipe($('#recipeText').value);
+
+  if (!parsed.ok) {
+    toast(parsed.hints[0] || '没识别出菜谱内容');
+    $('#recipeText').focus();
+    return;
+  }
+  if (!parsed.name) {
+    toast('请先写菜名');
+    return;
+  }
+
+  d.name = parsed.name;
+  d.ingredients = parsed.ingredients.map((i) => ({ n: i.n, a: i.a }));
+  d.steps = parsed.steps.slice();
+  d.description = parsed.tips || '';
+
+  const serv = parseInt($('#fServ').value, 10);
+  const minu = parseInt($('#fMin').value, 10);
+  d.servings = Number.isNaN(serv) ? 0 : Math.min(99, Math.max(0, serv));
+  d.minutes = Number.isNaN(minu) ? 0 : Math.min(9999, Math.max(0, minu));
+
+  const now = Date.now();
+  if (!d.id) { d.id = nextId(); d.createdAt = now; }
+  d.updatedAt = now;
+
+  try {
+    await dbPut(clone(d));
+    state.recipes = await dbAll();
+    state.dirty = false;
+    toast('已保存');
+    if (state.editFrom === 'detail') showDetail(d.id, 'left');
+    else showList('left');
+  } catch {
+    toast('保存失败，请重试');
+  }
+}
+
+async function doDelete() {
+  const id = state.draft.id;
+  const origin = state.recipes.find((r) => r.id === id);
+  try {
+    await dbDel(id);
+    if (origin && origin.cover) { await imgDel(origin.cover); urlCache.delete(origin.cover); }
+    if (state.draft.cover && state.draft.cover !== (origin && origin.cover)) {
+      await imgDel(state.draft.cover);
+      urlCache.delete(state.draft.cover);
+    }
+    state.recipes = await dbAll();
+    state.dirty = false;
+    toast('已删除');
+    showList('left');
+  } catch { toast('删除失败'); }
+}
+
+// ---------------------------------------------------------------- 导入导出
+
+/** 全部菜谱 → TXT 并触发下载 */
+function doExport() {
+  if (!state.recipes.length) {
+    toast('还没有菜谱可以导出');
+    return;
+  }
+  const text = P.exportAll(state.recipes);
+  // 开头加 BOM，Windows 记事本才能正确识别 UTF-8，否则中文会变乱码
+  const blob = new Blob(['\uFEFF' + text], { type: 'text/plain;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = P.suggestFileName();
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+  toast(`已导出 ${state.recipes.length} 道菜谱`);
+}
+
+/** 选择 TXT 文件 */
+function pickImportFile() {
+  // 挂到 DOM 上再触发：部分浏览器对未挂载的 input 不弹选择框
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.txt,text/plain';
+  input.id = 'importFileInput';
+  input.style.position = 'fixed';
+  input.style.left = '-9999px';
+  input.style.opacity = '0';
+  document.body.appendChild(input);
+
+  input.onchange = () => {
+    const file = input.files && input.files[0];
+    input.remove();
+    if (file) doImportFile(file);
+  };
+  input.click();
+}
+
+/** 文件字节 → 文本。Windows 记事本存的可能是 GBK，按 UTF-8 硬解会乱码 */
+function decodeBytes(buf) {
+  try {
+    // 严格模式：有非法字节就抛，说明不是 UTF-8
+    return new TextDecoder('utf-8', { fatal: true }).decode(buf);
+  } catch {
+    try {
+      return new TextDecoder('gbk').decode(buf);
+    } catch {
+      return new TextDecoder('utf-8').decode(buf);
+    }
+  }
+}
+
+async function doImportFile(file) {
+  let text = '';
+  try {
+    text = decodeBytes(await file.arrayBuffer());
+  } catch {
+    toast('文件读取失败');
+    return;
+  }
+
+  const blocks = P.splitBlocks(text);
+  if (!blocks.length) {
+    await dialog({
+      title: '导入失败',
+      message: '文件里没识别到菜谱。请确认是用本 App 导出的 TXT，或符合「# 菜名 / ### 食材 / ### 步骤」的格式。',
+      actions: [{ label: '知道了', value: true, style: 'primary' }],
+    });
+    return;
+  }
+
+  const names = new Set(state.recipes.map((r) => (r.name || '').trim()));
+  let added = 0;
+  let skipped = 0;
+  let failed = 0;
+  let next = nextId();
+  const now = Date.now();
+
+  for (const block of blocks) {
+    const parsed = P.parseRecipe(block);
+    if (!parsed.ok || !parsed.name) {
+      failed++;
+      continue;
+    }
+    const key = parsed.name.trim();
+    if (names.has(key)) {
+      skipped++;
+      continue;
+    }
+    names.add(key);
+
+    try {
+      await dbPut(clone({
+        id: next++,
+        name: parsed.name,
+        category: parsed.category,
+        cover: null,
+        description: parsed.tips || '',
+        servings: parsed.servings || 2,
+        minutes: parsed.minutes || 0,
+        difficulty: parsed.difficulty || 1,
+        ingredients: parsed.ingredients.map((i) => ({ n: i.n, a: i.a })),
+        steps: parsed.steps.slice(),
+        createdAt: now,
+        updatedAt: now,
+      }));
+      added++;
+    } catch {
+      failed++;
+    }
+  }
+
+  state.recipes = await dbAll();
+  state.keyword = '';
+  state.category = null;
+  showList('left');
+
+  let msg = `新增 ${added} 道菜谱。`;
+  if (skipped) msg += `\n跳过 ${skipped} 道同名菜谱。`;
+  if (failed) msg += `\n${failed} 段没能识别。`;
+  if (!added && !skipped) {
+    msg = '文件里没识别到菜谱。请确认是用本 App 导出的 TXT。';
+  }
+  if (skipped && !added) msg += '\n\n（同名判断按菜名精确匹配）';
+
+  await dialog({
+    title: '导入完成',
+    message: msg,
+    actions: [{ label: '好', value: true, style: 'primary' }],
+  });
+}
+
+// ---------------------------------------------------------------- AI
+
+function getApi() {
+  try {
+    const raw = localStorage.getItem('zuocai_api');
+    if (raw) return { ...DEFAULT_API, ...JSON.parse(raw) };
+  } catch { /* ignore */ }
+  return { ...DEFAULT_API };
+}
+
+function saveApi(cfg) {
+  localStorage.setItem('zuocai_api', JSON.stringify(cfg));
+}
+
+function buildPrompt(dish) {
+  return `你是一位专业中餐厨师，请为「${dish}」写一份可以直接下厨的菜谱。
+
+只输出菜谱正文，不要开场白、解释或结尾。严格照下面的示例格式，把内容换成这道菜的：
+
+# 番茄炒蛋
+### 食材
+番茄 2 个、鸡蛋 3 个、小葱 1 根、盐 适量、食用油 2 勺
+### 步骤
+1. 番茄切块，鸡蛋加少许盐打散。
+2. 热锅倒油，蛋液下锅凝固后盛出。
+3. 底油下番茄炒出汁，倒回鸡蛋翻炒均匀，加盐调味出锅。
+> 小贴士：蛋液里加一勺清水，炒出来更嫩。
+
+要求：
+- 第一行必须是「# ${dish}」，不要把「菜名」两个字照抄成标题
+- 食材 5–9 项，用量写具体（200g / 2 勺 / 半个），没有固定用量写「适量」
+- 步骤 3–6 步，每步 20–60 字，写清火候和时间
+- 小贴士一句话，点明容易失败的地方`;
+}
+
+async function callLLM(prompt) {
+  // 有本地服务时走代理，浏览器不直接接触 API Key
+  if (proxy.on) {
+    const res = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt, max_tokens: 3000 }),
+    });
+    let j = {};
+    try { j = await res.json(); } catch { /* ignore */ }
+    if (!res.ok) throw new Error(j.error || ('HTTP ' + res.status));
+    if (!j.content) throw new Error('返回内容为空');
+    return j.content;
+  }
+
+  const cfg = getApi();
+  const url = cfg.baseUrl.replace(/\/+$/, '') + '/chat/completions';
+
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ' + cfg.key,
+    },
+    body: JSON.stringify({
+      model: cfg.model,
+      messages: [{ role: 'user', content: prompt }],
+      temperature: 0.7,
+      max_tokens: 3000,
+      stream: false,
+    }),
+  });
+
+  if (!res.ok) {
+    const t = await res.text().catch(() => '');
+    throw new Error(`HTTP ${res.status} ${t.slice(0, 160)}`);
+  }
+  const data = await res.json();
+  const content = data && data.choices && data.choices[0] && data.choices[0].message
+    ? data.choices[0].message.content : '';
+  if (!content) throw new Error('返回内容为空');
+  return content.trim();
+}
+
+async function onAiClick() {
+  const cfg = getApi();
+
+  if (proxy.on) {
+    // 本地服务模式：Key 在服务端，浏览器无需配置
+    if (!proxy.configured) {
+      await dialog({
+        title: '服务端还没配置 Key',
+        message: '请编辑 web/config.local.json 填写 api_key，然后重启本地服务。',
+        actions: [{ label: '知道了', value: true, style: 'primary' }],
+      });
+      return;
+    }
+  } else if (!cfg.key) {
+    const go = await dialog({
+      title: '还没配置大模型',
+      message: '需要填一个 API Key 才能生成菜谱。硅基流动有免费模型，注册即可用。',
+      actions: [
+        { label: '暂不', value: false },
+        { label: '去配置', value: true, style: 'primary' },
+      ],
+    });
+    if (go) openSettings(renderEditor);
+    return;
+  }
+
+  const dish = await askDish();
+  if (!dish) return;
+
+  const modelName = proxy.on ? proxy.model : cfg.model;
+
+  const mask = document.createElement('div');
+  mask.className = 'mask';
+  mask.innerHTML = `
+    <div class="dialog">
+      <h4>正在生成「${esc(dish)}」</h4>
+      <p>调用 ${esc(modelName)}，通常需要 3–15 秒。</p>
+      <div class="loading"><span></span><span></span><span></span></div>
+    </div>`;
+  phone.appendChild(mask);
+
+  try {
+    const text = await callLLM(buildPrompt(dish));
+    mask.remove();
+
+    const ta = $('#recipeText');
+    const existing = ta.value.trim();
+    if (existing) {
+      const mode = await dialog({
+        title: '已有内容',
+        message: '文本框里已经有内容，要用 AI 结果替换吗？',
+        actions: [
+          { label: '取消', value: null },
+          { label: '追加到末尾', value: 'append' },
+          { label: '替换', value: 'replace', style: 'danger' },
+        ],
+      });
+      if (!mode) return;
+      ta.value = mode === 'append' ? existing + '\n\n' + text : text;
+    } else {
+      ta.value = text;
+    }
+
+    autoGrow(ta);
+    state.dirty = true;
+    state.userPickedCat = false;
+    runParse();
+    toast('已生成，记得检查一下');
+  } catch (err) {
+    mask.remove();
+    await dialog({
+      title: '生成失败',
+      message: friendlyError(String(err && err.message ? err.message : err)),
+      actions: [{ label: '知道了', value: true, style: 'primary' }],
+    });
+  }
+}
+
+function friendlyError(raw) {
+  const msg = String(raw || '');
+  if (/Failed to fetch|NetworkError|Load failed/i.test(msg)) {
+    return '网络请求被拦截。可能是这个接口不允许浏览器直接调用（跨域限制），或网络不通。建议换硅基流动这类支持跨域的接口，或在手机 App 里使用。';
+  }
+  if (/HTTP 401|HTTP 403|invalid.*token|unauthorized|api.?key/i.test(msg)) {
+    return 'API Key 无效或没有该模型的权限。请到设置里检查 Key 是否填写完整、是否已过期。';
+  }
+  if (/HTTP 404/.test(msg)) {
+    return '接口地址或模型名不对。检查一下 API 地址是否以 /v1 结尾，模型名是否与平台一致。';
+  }
+  if (/HTTP 429/.test(msg)) {
+    return '请求太频繁，触发了限流。等几十秒再试。';
+  }
+  if (/HTTP 5\d\d/.test(msg)) {
+    return '服务端暂时不可用，过一会儿再试。';
+  }
+  if (/返回内容为空/.test(msg)) {
+    return '接口返回了空内容，可能是模型名不对或额度用尽。';
+  }
+  return msg;
+}
+
+function askDish() {
+  return new Promise((resolve) => {
+    const mask = document.createElement('div');
+    mask.className = 'mask';
+    mask.innerHTML = `
+      <div class="dialog">
+        <h4>想做什么菜？</h4>
+        <p>写菜名就行，比如「洋葱炒肉」。</p>
+        <input class="field" id="aiDish" placeholder="洋葱炒肉" maxlength="30" autocomplete="off">
+        <div class="acts" style="margin-top:14px">
+          <button data-v="0">取消</button>
+          <button data-v="1" class="primary">生成</button>
+        </div>
+      </div>`;
+    phone.appendChild(mask);
+
+    const input = $('#aiDish', mask);
+    setTimeout(() => input.focus(), 60);
+
+    const done = (v) => { mask.remove(); resolve(v); };
+    mask.addEventListener('click', (e) => {
+      const b = e.target.closest('button[data-v]');
+      if (b) done(b.dataset.v === '1' ? input.value.trim() : '');
+      else if (e.target === mask) done('');
+    });
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') done(input.value.trim());
+    });
+  });
+}
+
+function openSettings(afterClose) {
+  const backFn = () => { if (afterClose) afterClose(); else showList('left'); };
+
+  if (proxy.on) {
+    root.innerHTML = `
+    <div class="view enter-right">
+      <div class="edit-top">
+        <button class="icon-btn" id="setBack" aria-label="返回">${svg('back', 21)}</button>
+        <div class="title">大模型设置</div>
+        <span style="width:40px"></span>
+      </div>
+      <div class="scroll">
+        <div class="edit-body">
+          <div class="group">
+            <div style="display:flex;align-items:center;gap:8px">
+              <span style="width:8px;height:8px;border-radius:50%;background:#3E9A5C"></span>
+              <b style="font-size:14px">已通过本地服务连接</b>
+            </div>
+            <div style="margin-top:14px;font-size:12.5px;color:var(--text-2);line-height:2">
+              模型：<code>${esc(proxy.model)}</code><br>
+              地址：<code>${esc(proxy.baseUrl)}</code>
+            </div>
+          </div>
+          <div class="note">
+            当前由 <code>web/serve.py</code> 在服务端转发请求，API Key 存在本机
+            <code>config.local.json</code>，不会进入浏览器，也不受跨域限制。<br><br>
+            要换模型或 Key：编辑那个文件后重启服务即可，这里不需要填写。
+          </div>
+          <div class="note warn">
+            直接用浏览器打开 <code>preview.html</code> 时没有本地服务，AI 功能会回退到浏览器直连模式，届时需要在设置里手动填 Key。
+          </div>
+        </div>
+      </div>
+    </div>`;
+    $('#setBack').onclick = backFn;
+    return;
+  }
+
+  const cfg = getApi();
+  root.innerHTML = `
+  <div class="view enter-right">
+    <div class="edit-top">
+      <button class="icon-btn" id="setBack" aria-label="返回">${svg('back', 21)}</button>
+      <div class="title">大模型设置</div>
+      <button class="btn-primary" id="setSave">保存</button>
+    </div>
+    <div class="scroll">
+      <div class="edit-body">
+        <div class="group">
+          <div class="label">API 地址</div>
+          <input class="field" id="cfgUrl" value="${esc(cfg.baseUrl)}" placeholder="https://api.siliconflow.cn/v1">
+          <div class="label" style="margin-top:14px">模型名</div>
+          <input class="field" id="cfgModel" value="${esc(cfg.model)}" placeholder="Qwen/Qwen2.5-7B-Instruct">
+          <div class="label" style="margin-top:14px">API Key</div>
+          <input class="field" id="cfgKey" type="password" value="${esc(cfg.key)}" placeholder="sk-...">
+        </div>
+
+        <div class="note">
+          <b>网页版推荐：硅基流动</b><br>
+          注册送 2000 万 Token，9B 以下模型永久免费，且允许浏览器直接调用。<br>
+          <code>https://api.siliconflow.cn/v1</code> · <code>Qwen/Qwen2.5-7B-Instruct</code>
+          <br><br>
+          <b>智谱在网页版调不通</b><br>
+          它的接口不返回跨域头，浏览器直连会被拦。<br>
+          要用智谱请装 APK，填 <code>glm-4-flash</code>（实测免费可用、响应快）；<br>
+          <code>glm-4.7-flash</code> 限流严重易 429，<code>glm-4.5-flash</code> 默认开深度思考会吃掉输出额度。
+        </div>
+
+        <div class="note warn">Key 只保存在本机浏览器，不会上传到任何服务器。</div>
+      </div>
+    </div>
+  </div>`;
+
+  $('#setBack').onclick = backFn;
+  $('#setSave').onclick = () => {
+    saveApi({
+      baseUrl: $('#cfgUrl').value.trim() || DEFAULT_API.baseUrl,
+      model: $('#cfgModel').value.trim() || DEFAULT_API.model,
+      key: $('#cfgKey').value.trim(),
+    });
+    toast('已保存');
+    backFn();
+  };
+}
+
+// ---------------------------------------------------------------- 内置默认菜谱
+
+// 默认菜谱在 default-recipes.js（与 app/src/main/assets/default_recipes.txt 同源），
+// 这里只负责按菜名去重后补进 IndexedDB。版本号变了才会再跑一次。
+const SEED_VER = '4';
+
+// 旧版本自动写入的 3 道演示菜，用户不需要，升级时顺手清掉
+const LEGACY_SAMPLES = ['西红柿炒鸡蛋', '可乐鸡翅', '番茄蛋花汤'];
+
+// 内置封面是随包发布的静态文件（covers/cNN.jpg），与用户上传的 IndexedDB blob 用前缀区分
+const SEED_COVER_DIR = 'covers/';
+
+async function seedIfNeeded() {
+  if (localStorage.getItem('zuocai_seeded') === SEED_VER) return;
+
+  const all = await dbAll();
+  const known = new Set(all.map((r) => (r.name || '').trim()));
+  let cursor = all.reduce((m, r) => Math.max(m, r.id || 0), 0);
+  const now = Date.now();
+  const text = window.DEFAULT_RECIPES_TEXT || '';
+
+  // 先解析一遍：菜名 → 封面相对路径
+  const seeds = [];
+  for (const block of P.splitBlocks(text)) {
+    const parsed = P.parseRecipe(block);
+    if (!parsed || !parsed.ok || !parsed.name) continue;
+    const m = block.match(/@封面[：:]\s*([A-Za-z0-9_-]+)/);
+    seeds.push({
+      parsed,
+      name: parsed.name.trim(),
+      cover: m ? SEED_COVER_DIR + m[1] + '.jpg' : null,
+    });
+  }
+  const covers = new Map(seeds.filter((s) => s.cover).map((s) => [s.name, s.cover]));
+
+  // 清掉旧演示菜，并给已经存在的内置菜谱补封面
+  for (const r of all) {
+    const name = (r.name || '').trim();
+    if (LEGACY_SAMPLES.includes(name)) {
+      await dbDel(r.id);
+      known.delete(name);
+      continue;
+    }
+    const want = covers.get(name);
+    if (want && r.cover !== want) {
+      r.cover = want;
+      await dbPut(r);
+    }
+  }
+
+  for (const seed of seeds) {
+    if (known.has(seed.name)) continue;
+    const parsed = seed.parsed;
+    known.add(seed.name);
+    cursor += 1;
+    await dbPut({
+      id: cursor,
+      name: seed.name,
+      category: parsed.category || 'home',
+      cover: seed.cover,
+      description: parsed.tips || '',
+      servings: parsed.servings || 2,
+      minutes: parsed.minutes || 0,
+      difficulty: parsed.difficulty || 1,
+      ingredients: parsed.ingredients || [],
+      steps: parsed.steps || [],
+      createdAt: now - cursor * 1000,
+      updatedAt: now - cursor * 1000,
+    });
+  }
+
+  localStorage.setItem('zuocai_seeded', SEED_VER);
+}
+
+
+// ---------------------------------------------------------------- 启动
+
+async function boot() {
+  await detectProxy();
+  try {
+    await seedIfNeeded();
+    state.recipes = await dbAll();
+  } catch (err) {
+    console.error(err);
+    state.recipes = [];
+    setTimeout(() => toast('当前环境不支持本地存储，改动不会被保存'), 400);
+  }
+  showList();
+}
+
+function tickClock() {
+  const el = document.getElementById('clock');
+  if (!el) return;
+  const d = new Date();
+  el.textContent = `${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}`;
+}
+tickClock();
+setInterval(tickClock, 30000);
+
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Escape') return;
+  if ($('.mask')) return;
+  if ($('#btnClose')) { tryCloseEditor(); return; }
+  if ($('#setBack')) { $('#setBack').click(); return; }
+  if ($('#btnBack')) { showList('left'); }
+});
+
+boot();
+
+})();
+
+</script>
+</body>
+</html>

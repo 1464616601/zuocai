@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 动作键 B：冷色圆钮，和 A 区分主次 -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_pressed="true">
+        <shape android:shape="oval">
+            <gradient
+                android:angle="270"
+                android:startColor="#3560C9"
+                android:endColor="#2A4DA8" />
+            <stroke android:width="2dp" android:color="#33FFFFFF" />
+        </shape>
+    </item>
+    <item>
+        <shape android:shape="oval">
+            <gradient
+                android:angle="270"
+                android:startColor="#5B84F5"
+                android:endColor="#3B62DB" />
+            <stroke android:width="2dp" android:color="#4DFFFFFF" />
+        </shape>
+    </item>
+</selector>

@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 品牌色：温暖橙红 -->
+    <color name="brand">#E2571E</color>
+    <color name="brand_dark">#B8430F</color>
+    <color name="brand_light">#FFEDE3</color>
+
+    <!-- 背景与表面 -->
+    <color name="bg">#FBF7F2</color>
+    <color name="surface">#FFFFFF</color>
+    <color name="surface_sunken">#F4EDE5</color>
+
+    <!-- 文字 -->
+    <color name="text_primary">#2A211B</color>
+    <color name="text_secondary">#7A6B5D</color>
+    <color name="text_tertiary">#A99A8B</color>
+    <color name="text_on_brand">#FFFFFF</color>
+
+    <!-- 线条 -->
+    <color name="divider">#EFE5DA</color>
+    <color name="input_bg">#F6F0E9</color>
+
+    <!-- 功能色 -->
+    <color name="chip_selected">#E2571E</color>
+    <color name="chip_normal">#F2E9DF</color>
+    <color name="danger">#C62828</color>
+    <color name="star">#F2A03D</color>
+
+    <color name="ic_launcher_background">#E2571E</color>
+</resources>

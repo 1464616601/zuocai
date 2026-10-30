@@ -1,0 +1,25 @@
+*.iml
+.gradle/
+/local.properties
+/.idea/
+.DS_Store
+/build
+/app/build
+/captures
+.externalNativeBuild
+.cxx
+local.properties
+*.hprof
+
+# 本地密钥，不要提交
+web/config.local.json
+keystore/
+*.jks
+*.keystore
+
+# 备份与临时文件
+*.zip
+
+# 本地服务运行日志
+web/serve.log
+web/serve.err

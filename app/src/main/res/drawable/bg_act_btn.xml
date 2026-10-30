@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 动作键 A/B：橙色渐变圆钮，按下收光变深 -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_pressed="true">
+        <shape android:shape="oval">
+            <gradient
+                android:angle="270"
+                android:startColor="#D8490F"
+                android:endColor="#B03E0B" />
+            <stroke android:width="2dp" android:color="#33FFFFFF" />
+        </shape>
+    </item>
+    <item>
+        <shape android:shape="oval">
+            <gradient
+                android:angle="270"
+                android:startColor="#F08A4B"
+                android:endColor="#E2571E" />
+            <stroke android:width="2dp" android:color="#4DFFFFFF" />
+        </shape>
+    </item>
+</selector>

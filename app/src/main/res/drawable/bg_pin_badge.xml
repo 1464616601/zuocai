@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 卡片右上角「常做」徽章 -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="#E2571E" />
+    <corners
+        android:bottomLeftRadius="10dp"
+        android:topRightRadius="17dp" />
+</shape>
