@@ -23,6 +23,7 @@ const I = {
   pin: '<path d="M17,3H7A2,2 0 0,0 5,5V21L12,18L19,21V5C19,3.89 18.1,3 17,3Z"/>',
   cart: '<path d="M7,18c-1.1,0 -1.99,0.9 -1.99,2S5.9,22 7,22s2,-0.9 2,-2 -0.9,-2 -2,-2zM1,2v2h2l3.6,7.59 -1.35,2.45c-0.16,0.28 -0.25,0.61 -0.25,0.96 0,1.1 0.9,2 2,2h12v-2L7.42,15c-0.14,0 -0.25,-0.11 -0.25,-0.25l0.03,-0.12 0.9,-1.63h7.45c0.75,0 1.41,-0.41 1.75,-1.03l3.58,-6.49c0.08,-0.14 0.12,-0.31 0.12,-0.48 0,-0.55 -0.45,-1 -1,-1L5.21,4l-0.94,-2L1,2zM17,18c-1.1,0 -1.99,0.9 -1.99,2s0.89,2 1.99,2 2,-0.9 2,-2 -0.9,-2 -2,-2z"/>',
   setting: '<path d="M19.14 12.94a7.07 7.07 0 0 0 0-1.88l2.03-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.6-.22l-2.39.96a7.03 7.03 0 0 0-1.62-.94l-.36-2.54a.5.5 0 0 0-.5-.42h-3.84a.5.5 0 0 0-.49.42l-.36 2.54c-.58.24-1.12.55-1.62.94l-2.39-.96a.5.5 0 0 0-.6.22L2.71 8.84a.5.5 0 0 0 .12.64l2.03 1.58a7.07 7.07 0 0 0 0 1.88l-2.03 1.58a.5.5 0 0 0-.12.64l1.92 3.32c.13.22.39.3.6.22l2.39-.96c.5.39 1.04.7 1.62.94l.36 2.54c.04.24.25.42.49.42h3.84c.25 0 .46-.18.5-.42l.36-2.54c.58-.24 1.12-.55 1.62-.94l2.39.96c.22.08.47 0 .6-.22l1.92-3.32a.5.5 0 0 0-.12-.64l-2.03-1.58zM12 15.6A3.6 3.6 0 1 1 12 8.4a3.6 3.6 0 0 1 0 7.2z"/>',
+  play: '<path d="M8 5.14v13.72L19.5 12z"/>',
 };
 
 const svg = (name, size = 22, opacity = 1) =>
@@ -116,6 +117,19 @@ const imgDel = (k) => tx('images', 'readwrite').then((s) => reqToPromise(s.delet
 // ---------------------------------------------------------------- 图片
 
 const urlCache = new Map();
+
+/**
+ * 丢掉一张图的缓存。
+ *
+ * 必须连 Blob URL 一起 revoke：只 delete key 的话，那张图的数据会一直挂在内存里，
+ * 换封面几十次之后页面就明显变卡了。
+ */
+function dropUrl(key) {
+  if (!key) return;
+  const url = urlCache.get(key);
+  if (url) URL.revokeObjectURL(url);
+  urlCache.delete(key);
+}
 
 async function imageUrl(key) {
   if (!key) return null;
@@ -276,6 +290,7 @@ function newRecipe() {
     id: 0, name: '', category: 'home', cover: null, description: '',
     servings: 2, minutes: 0, difficulty: 1,
     ingredients: [], steps: [], createdAt: 0, updatedAt: 0,
+    videoUrl: '', videoType: '',
   };
 }
 
@@ -578,6 +593,7 @@ const GAME_ICONS = {
   box: '<rect x="4.5" y="7" width="15" height="12" rx="2"/><path d="M4.5 11h15M12 7v12"/>',
   plane: '<path d="M12 3.2c.9 0 1.6 1.3 1.6 3.2v2.3l5.5 3.2c.6.35.9.8.9 1.5v1.2l-6.4-1.9v3.6l1.8 1.4v1.2L12 18.1l-3.4 1.9v-1.2l1.8-1.4v-3.6l-6.4 1.9v-1.2c0-.7.3-1.15.9-1.5l5.5-3.2V6.4c0-1.9.7-3.2 1.6-3.2z"/>',
   tank: '<rect x="4" y="10" width="16" height="8" rx="2.5"/><path d="M11 10V6h5"/><circle cx="8" cy="19.5" r="1.4"/><circle cx="16" cy="19.5" r="1.4"/>',
+  jump: '<rect x="3.5" y="17.5" width="6" height="3.5" rx="1.2"/><rect x="14.5" y="14.5" width="6" height="6.5" rx="1.2"/><path d="M6.5 15.5C8 10.5 14.5 10.5 16.5 13.5"/><circle cx="6.5" cy="12.2" r="1.7"/>',
 };
 
 function gameIcon(name, size = 26) {
@@ -711,11 +727,22 @@ function playGameEvents(events) {
 let gameRaf = null;
 let gameInst = null;
 let gameKey = null;
+/** 离开游戏页要摘掉的键盘/尺寸监听 */
+let gameCleanup = null;
+/** 重新拉起主循环（复活用） */
+let gameStartLoop = null;
 
 function stopGame() {
   if (gameRaf) cancelAnimationFrame(gameRaf);
   gameRaf = null;
   gameInst = null;
+  gameStartLoop = null;
+  // 以前只在「返回列表」那条路径摘监听，点「再来一局」会再挂一份，
+  // 结果是第二局里每按一次键动作执行两次
+  if (gameCleanup) {
+    gameCleanup();
+    gameCleanup = null;
+  }
 }
 
 function openGame(key) {
@@ -741,16 +768,17 @@ function openGame(key) {
       <canvas id="gameCanvas"></canvas>
     </div>
 
-    <div class="game-pad">
+    <div class="game-pad${meta.pad === 'single' ? ' single' : ''}">
+      ${meta.pad === 'single' ? '' : `
       <div class="dpad">
         <button class="pad-btn up" data-k="up" aria-label="上"><i class="pad-ic up">${svg('chevron', 24)}</i></button>
         <button class="pad-btn left" data-k="left" aria-label="左"><i class="pad-ic left">${svg('chevron', 24)}</i></button>
         <button class="pad-btn right" data-k="right" aria-label="右"><i class="pad-ic right">${svg('chevron', 24)}</i></button>
         <button class="pad-btn down" data-k="down" aria-label="下"><i class="pad-ic down">${svg('chevron', 24)}</i></button>
-      </div>
+      </div>`}
       <div class="acts">
-        <button class="act-btn" data-k="a">A</button>
-        <button class="act-btn alt" data-k="b">B</button>
+        <button class="act-btn${meta.pad === 'single' ? ' big' : ''}" data-k="a">${meta.action || 'A'}</button>
+        ${meta.pad === 'single' ? '' : '<button class="act-btn alt" data-k="b">B</button>'}
       </div>
     </div>
   </div>`;
@@ -811,7 +839,15 @@ function openGame(key) {
       }
       gameRaf = requestAnimationFrame(tick);
     }
-    gameRaf = requestAnimationFrame(tick);
+
+    // 复活时用它把循环重新拉起来，不用重建整页 DOM
+    gameStartLoop = () => {
+      if (!gameInst) return;
+      last = performance.now();
+      if (gameRaf) cancelAnimationFrame(gameRaf);
+      gameRaf = requestAnimationFrame(tick);
+    };
+    gameStartLoop();
   });
 
   // 虚拟按键：按住连续触发
@@ -827,7 +863,10 @@ function openGame(key) {
     };
     const start = (e) => {
       buzz(14);
+      if (gameInst && gameInst.press) gameInst.press(action);
       fire(e);
+      // 跳一跳靠「按住蓄力」，不能连发，否则一按就跳出去了
+      if (!gameInst || gameInst.holdRepeat === false) return;
       delay = setTimeout(() => {
         timer = setInterval(() => { if (gameInst) gameInst.input(action); }, 95);
       }, 280);
@@ -836,6 +875,7 @@ function openGame(key) {
       clearTimeout(delay);
       clearInterval(timer);
       timer = null;
+      if (gameInst && gameInst.release) gameInst.release(action);
     };
 
     btn.addEventListener('pointerdown', start);
@@ -855,15 +895,17 @@ function openGame(key) {
     const act = keyMap[e.key];
     if (!act || !gameInst) return;
     e.preventDefault();
+    // 长按住时浏览器会连发 keydown，蓄力游戏只认第一次
+    if (!e.repeat && gameInst.press) gameInst.press(act);
     gameInst.input(act);
   };
+  const onKeyUp = (e) => {
+    const act = keyMap[e.key];
+    if (!act || !gameInst) return;
+    if (gameInst.release) gameInst.release(act);
+  };
   document.addEventListener('keydown', onKey);
-  // 离开游戏页时把监听摘掉
-  const cleanup = () => document.removeEventListener('keydown', onKey);
-  const backBtn = $('#gameBack');
-  const prevBack = backBtn.onclick;
-  backBtn.onclick = () => { saveBestIfBetter(key); cleanup(); stopGame(); showGames(); };
-  void prevBack;
+  document.addEventListener('keyup', onKeyUp);
 
   // 窗口尺寸变化（旋转屏幕 / 拖窗口）
   const onResize = () => {
@@ -873,6 +915,13 @@ function openGame(key) {
     gameInst.state.score = before.score;
   };
   window.addEventListener('resize', onResize);
+
+  // 统一交给 stopGame() 摘，保证每条离开路径都会清理
+  gameCleanup = () => {
+    document.removeEventListener('keydown', onKey);
+    document.removeEventListener('keyup', onKeyUp);
+    window.removeEventListener('resize', onResize);
+  };
 }
 
 /** 中途退出也要记住最高分，否则玩得再高也白费 */
@@ -886,7 +935,15 @@ function finishGame(key, name, score) {
   const prev = getBest(key);
   const isNew = score > prev;
   if (isNew) setBest(key, score);
-  stopGame();
+
+  // 只停循环，先别拆监听：跳一跳点「复活」还要接着玩
+  if (gameRaf) {
+    cancelAnimationFrame(gameRaf);
+    gameRaf = null;
+  }
+
+  const inst = gameInst;
+  const canRevive = !!(inst && typeof inst.canRevive === 'function' && inst.canRevive());
 
   const mask = document.createElement('div');
   mask.className = 'mask';
@@ -895,18 +952,30 @@ function finishGame(key, name, score) {
       <h4>${isNew ? '新纪录！' : '本局结束'}</h4>
       <p>${name}　得分 <b>${score}</b>${isNew || prev <= 0 ? '' : `<br>最高分 ${prev}`}</p>
       <div class="acts">
-        <button class="primary" id="goAgain">再来一局</button>
+        ${canRevive ? '<button class="primary" id="goRevive">复活继续（无限）</button>' : ''}
+        <button${canRevive ? '' : ' class="primary"'} id="goAgain">再来一局</button>
         <button id="goBack">返回游戏列表</button>
       </div>
     </div>`;
   phone.appendChild(mask);
 
+  if (canRevive) {
+    mask.querySelector('#goRevive').onclick = () => {
+      mask.remove();
+      inst.revive();
+      gameInst = inst;
+      if (gameStartLoop) gameStartLoop();
+    };
+  }
+
   mask.querySelector('#goAgain').onclick = () => {
     mask.remove();
+    stopGame();
     openGame(key);
   };
   mask.querySelector('#goBack').onclick = () => {
     mask.remove();
+    stopGame();
     showGames();
   };
 }
@@ -1126,6 +1195,50 @@ function openShopping() {
   render();
 }
 
+// ---------------------------------------------------------------- 视频
+
+function videoCardHTML(r, previewing) {
+  if (!r.videoUrl || previewing) return '';
+  const type = r.videoType || P.detectVideoType(r.videoUrl);
+  const site = P.videoSiteLabel(r.videoUrl);
+  const inside = P.videoCanPlayInside(r.videoUrl, type);
+  return `
+    <div class="video-card" id="videoCard">
+      <span class="vplay">${svg('play', 15)}</span>
+      <span class="vtext">
+        <b>${esc(site)} 视频</b>
+        <i>${inside ? '点击播放' : '需跳转浏览器或原 App'}</i>
+      </span>
+      <span class="vgo">${inside ? '播放' : '打开'}</span>
+    </div>
+    <div class="video-stage" id="videoStage" hidden></div>`;
+}
+
+/**
+ * 网页端能内嵌的只有直链和 B 站官方播放器。
+ * 小红书这类平台会返回 X-Frame-Options，iframe 必然加载失败，只能开新标签。
+ */
+function playVideo(r) {
+  const stage = $('#videoStage');
+  if (!stage || !r.videoUrl) return;
+
+  const type = r.videoType || P.detectVideoType(r.videoUrl);
+  const embed = P.bilibiliEmbed(r.videoUrl);
+
+  if (type === 'direct') {
+    stage.innerHTML = `<video controls autoplay playsinline preload="metadata" src="${esc(r.videoUrl)}"></video>`;
+  } else if (embed) {
+    stage.innerHTML = `<iframe src="${esc(embed)}" frameborder="0" scrolling="no"
+      allowfullscreen allow="autoplay; fullscreen"></iframe>`;
+  } else {
+    window.open(r.videoUrl, '_blank', 'noopener');
+    toast('该平台不允许网页内嵌，已在新标签打开');
+    return;
+  }
+  stage.hidden = false;
+  stage.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+}
+
 // ---------------------------------------------------------------- 详情页
 
 // 做法切换状态：detailVariant = -1 表示原做法
@@ -1182,6 +1295,8 @@ function showDetail(id, transition = 'right') {
           ${chipRow}
           <div class="desc ${desc ? '' : 'muted'}">${esc(desc || '暂无描述')}</div>
 
+          ${videoCardHTML(r, previewing)}
+
           ${ings.length ? `
             <hr class="sep">
             <h3 class="sec-title">食材清单</h3>
@@ -1226,6 +1341,7 @@ function showDetail(id, transition = 'right') {
     detailId = null;
     showList('left');
   };
+  if ($('#videoCard')) $('#videoCard').onclick = () => playVideo(r);
   if ($('#btnEdit')) $('#btnEdit').onclick = () => openEditor(id, 'detail');
   if ($('#btnAi')) $('#btnAi').onclick = () => askMissing(id);
   if ($('#btnPin')) {
@@ -1464,6 +1580,14 @@ function editorView(d) {
           </div>
         </div>
 
+        <div class="opt-block">
+          <div class="label">视频（选填）</div>
+          <input class="field" id="fVideo" autocomplete="off"
+                 placeholder="粘贴视频链接或整段分享文案，支持小红书 / B 站 / mp4 直链"
+                 value="${esc(d.videoUrl || '')}">
+          <div class="video-state" id="videoState" hidden></div>
+        </div>
+
         <details class="more">
           <summary>更多选项（人份 / 时长 / 难度）</summary>
           <div class="row-3">
@@ -1497,6 +1621,7 @@ function openEditor(id, from) {
   state.draft = origin ? clone(origin) : newRecipe();
   state.dirty = false;
   state.userPickedCat = !!origin;
+  state.videoCleared = false;
 
   renderEditor();
 }
@@ -1533,7 +1658,7 @@ async function pickCoverSource(fileInput) {
   else if (v === 'remove') {
     const old = state.draft.cover;
     state.draft.cover = null;
-    if (old) { await imgDel(old); urlCache.delete(old); }
+    if (old) { await imgDel(old); dropUrl(old); }
     state.dirty = true;
     updateCoverUI();
   }
@@ -1674,7 +1799,7 @@ async function applyPickedImage(item, mask, body) {
 
     const old = state.draft.cover;
     state.draft.cover = key;
-    if (old) { await imgDel(old); urlCache.delete(old); }
+    if (old) { await imgDel(old); dropUrl(old); }
 
     state.dirty = true;
     mask.remove();
@@ -1769,7 +1894,7 @@ async function generateCover() {
 
     const old = state.draft.cover;
     state.draft.cover = key;
-    if (old) { await imgDel(old); urlCache.delete(old); }
+    if (old) { await imgDel(old); dropUrl(old); }
 
     state.dirty = true;
     mask.remove();
@@ -1829,6 +1954,17 @@ function bindEditorEvents() {
     state.dirty = true;
   };
 
+  const videoInput = $('#fVideo');
+  if (videoInput) {
+    videoInput.addEventListener('input', () => {
+      state.dirty = true;
+      // 用户手动清空后，别让正文里的 `@视频：` 又把它填回来
+      state.videoCleared = !videoInput.value.trim();
+      updateVideoState();
+    });
+    updateVideoState();
+  }
+
   const fileInput = $('#fileInput');
   $('#coverPick').onclick = () => pickCoverSource(fileInput);
   fileInput.onchange = async () => {
@@ -1838,7 +1974,7 @@ function bindEditorEvents() {
     try {
       const old = d.cover;
       d.cover = await storeImage(file);
-      if (old) { await imgDel(old); urlCache.delete(old); }
+      if (old) { await imgDel(old); dropUrl(old); }
       state.dirty = true;
       updateCoverUI();
       hydrateImages($('#coverPick'));
@@ -1849,7 +1985,7 @@ function bindEditorEvents() {
     e.stopPropagation();
     const old = d.cover;
     d.cover = null;
-    if (old) { await imgDel(old); urlCache.delete(old); }
+    if (old) { await imgDel(old); dropUrl(old); }
     state.dirty = true;
     updateCoverUI();
   };
@@ -1936,6 +2072,40 @@ function runParse() {
     state.draft.category = parsed.category;
     renderCatBar();
   }
+
+  // 正文里带 `@视频：` 时（导入的 TXT 就有）回填到视频框；
+  // 已经有内容就以视频框为准，别拿旧文本覆盖用户刚填的链接
+  const vInput = $('#fVideo');
+  if (vInput && parsed.videoUrl && !state.videoCleared && !vInput.value.trim()) {
+    vInput.value = parsed.videoUrl;
+    updateVideoState();
+  }
+}
+
+/** 视频输入框下方的识别提示 */
+function updateVideoState() {
+  const input = $('#fVideo');
+  const box = $('#videoState');
+  if (!input || !box) return;
+
+  const url = P.normalizeVideoUrl(input.value);
+  if (!url) {
+    if (!input.value.trim()) {
+      box.hidden = true;
+      box.textContent = '';
+    } else {
+      // 填了东西却抠不出链接，说清楚，别让用户以为已经存上了
+      box.hidden = false;
+      box.classList.add('bad');
+      box.textContent = '没识别出链接，请确认是 http(s):// 开头的地址';
+    }
+    return;
+  }
+  box.classList.remove('bad');
+  const type = P.detectVideoType(url);
+  box.hidden = false;
+  box.textContent = `已识别：${P.videoSiteLabel(url)} · ` +
+    (P.videoCanPlayInside(url, type) ? '可在 App 内播放' : '需跳转浏览器或原 App');
 }
 
 function renderPreview() {
@@ -1998,7 +2168,7 @@ async function tryCloseEditor() {
     const origin = state.recipes.find((r) => r.id === state.editId);
     if (state.draft.cover && state.draft.cover !== (origin && origin.cover)) {
       await imgDel(state.draft.cover);
-      urlCache.delete(state.draft.cover);
+      dropUrl(state.draft.cover);
     }
     leaveEditor();
   }
@@ -2034,6 +2204,11 @@ async function saveDraft() {
   d.servings = Number.isNaN(serv) ? 0 : Math.min(99, Math.max(0, serv));
   d.minutes = Number.isNaN(minu) ? 0 : Math.min(9999, Math.max(0, minu));
 
+  // 视频以输入框为准：没有 `@视频：` 行的菜谱，正文解析不出链接
+  const vUrl = P.normalizeVideoUrl($('#fVideo') ? $('#fVideo').value : '');
+  d.videoUrl = vUrl;
+  d.videoType = vUrl ? P.detectVideoType(vUrl) : '';
+
   const now = Date.now();
   if (!d.id) { d.id = nextId(); d.createdAt = now; }
   d.updatedAt = now;
@@ -2055,10 +2230,10 @@ async function doDelete() {
   const origin = state.recipes.find((r) => r.id === id);
   try {
     await dbDel(id);
-    if (origin && origin.cover) { await imgDel(origin.cover); urlCache.delete(origin.cover); }
+    if (origin && origin.cover) { await imgDel(origin.cover); dropUrl(origin.cover); }
     if (state.draft.cover && state.draft.cover !== (origin && origin.cover)) {
       await imgDel(state.draft.cover);
-      urlCache.delete(state.draft.cover);
+      dropUrl(state.draft.cover);
     }
     state.recipes = await dbAll();
     state.dirty = false;
@@ -2178,6 +2353,8 @@ async function doImportFile(file) {
         steps: parsed.steps.slice(),
         createdAt: now,
         updatedAt: now,
+        videoUrl: parsed.videoUrl || '',
+        videoType: parsed.videoType || '',
       }));
       added++;
     } catch {
@@ -2584,11 +2761,34 @@ async function boot() {
     await seedIfNeeded();
     state.recipes = await dbAll();
   } catch (err) {
+    // 读不出数据就彻底别进主界面：以前是置空继续跑，之后新建菜谱会从 id=1 开始，
+    // 直接覆盖库里已有的 1、2、3 号菜谱
     console.error(err);
-    state.recipes = [];
-    setTimeout(() => toast('当前环境不支持本地存储，改动不会被保存'), 400);
+    state.storageBroken = true;
+    showStorageError();
+    return;
   }
   showList();
+}
+
+/** 本地存储不可用时的兜底页，明确只读、不给编辑入口 */
+function showStorageError() {
+  root.innerHTML = `
+  <div class="view">
+    <div class="edit-top">
+      <div class="title">无法读取本地数据</div>
+      <span style="width:40px"></span>
+    </div>
+    <div class="scroll">
+      <div class="games-body">
+        <div class="games-intro">
+          浏览器没能打开本地数据库，常见原因是无痕模式、站点数据被禁用，或存储空间已满。<br><br>
+          为避免覆盖已有菜谱，这里不提供编辑入口。<br><br>
+          换一个普通窗口打开，或清理浏览器存储后刷新即可恢复。
+        </div>
+      </div>
+    </div>
+  </div>`;
 }
 
 function tickClock() {

@@ -36,17 +36,19 @@
                 android:id="@+id/gameTitle"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:fontFamily="sans-serif-medium"
                 android:textColor="@color/text_primary"
-                android:textSize="16.5sp"
-                android:textStyle="bold" />
+                android:textSize="16.5sp" />
 
+            <!-- 两行：跳一跳的「按住蓄力，松开起跳」一行放不下会被截断 -->
             <TextView
                 android:id="@+id/gameLabel"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="2dp"
                 android:ellipsize="end"
-                android:maxLines="1"
+                android:lineSpacingExtra="1dp"
+                android:maxLines="2"
                 android:textColor="@color/text_tertiary"
                 android:textSize="11.5sp" />
         </LinearLayout>
@@ -139,6 +141,7 @@
         android:paddingBottom="22dp">
 
         <GridLayout
+            android:id="@+id/padGrid"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:columnCount="3"
@@ -198,11 +201,13 @@
         </GridLayout>
 
         <Space
+            android:id="@+id/padSpacer"
             android:layout_width="0dp"
             android:layout_height="1dp"
             android:layout_weight="1" />
 
         <LinearLayout
+            android:id="@+id/actsBox"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:gravity="center_vertical"

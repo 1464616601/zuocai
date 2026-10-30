@@ -1163,9 +1163,288 @@
   }
 
   /* ================================================================
+     6. 跳一跳
+     按住蓄力、松开起跳，复刻微信小程序那版。
+     摔倒可以无限复活：分数保留，角色回到当前方块中心接着跳。
+     ================================================================ */
+  function Jump() {
+    const state = { score: 0, over: false, paused: false, label: '', events: [] };
+    const COLORS = ['#6E5B4B', '#5C6B57', '#6B565C', '#4F6170', '#7A6448'];
+
+    let W = 0;
+    let H = 0;
+    let groundY = 0;
+    let unit = 0;
+
+    let blocks = [];
+    let cur = 0;
+
+    let px = 0;
+    let py = 0;
+
+    let charging = false;
+    let power = 0;
+
+    let jumping = false;
+    let jElapsed = 0;
+    let jDur = 380;
+    let jFrom = 0;
+    let jTo = 0;
+    let jPeak = 0;
+
+    let falling = false;
+    let fallSpeed = 0;
+
+    let camX = 0;
+    let camTarget = 0;
+    let labelTtl = 0;
+
+    function spawnNext() {
+      const last = blocks[blocks.length - 1];
+      const gap = unit * (8 + Math.random() * 14);
+      const bw = unit * (14 + Math.random() * 12);
+      blocks.push({
+        x: last.x + last.w + gap,
+        w: bw,
+        color: COLORS[blocks.length % COLORS.length],
+      });
+    }
+
+    function buildWorld() {
+      blocks = [];
+      const firstW = unit * 26;
+      const firstX = unit * 10;
+      blocks.push({ x: firstX, w: firstW, color: COLORS[0] });
+      spawnNext();
+      cur = 0;
+      px = firstX + firstW / 2;
+      py = groundY;
+      camX = 0;
+      camTarget = 0;
+    }
+
+    function reset() {
+      state.score = 0;
+      state.over = false;
+      state.label = '';
+      state.events.length = 0;
+      charging = false;
+      power = 0;
+      jumping = false;
+      falling = false;
+      fallSpeed = 0;
+      jElapsed = 0;
+      labelTtl = 0;
+      camX = 0;
+      camTarget = 0;
+      blocks = [];
+      if (unit > 0) buildWorld();
+    }
+
+    function startJump() {
+      // 最短也要跳出脚下这块方块（最宽的方块半宽 13u），否则轻点一下就原地摔死
+      const dist = unit * (16 + power * 32);
+      jFrom = px;
+      jTo = px + dist;
+      jElapsed = 0;
+      jDur = 330 + power * 170;
+      jPeak = unit * (11 + power * 7);
+      jumping = true;
+      charging = false;
+      power = 0;
+      state.label = '';
+      labelTtl = 0;
+      state.events.push('drop');
+    }
+
+    function land() {
+      let idx = -1;
+      for (let i = 0; i < blocks.length; i++) {
+        const b = blocks[i];
+        if (px >= b.x && px <= b.x + b.w) { idx = i; break; }
+      }
+      // 没踩到下一块：跳短了或者跳过头
+      if (idx <= cur) {
+        falling = true;
+        fallSpeed = unit * 0.06;
+        state.label = '';
+        state.events.push('hurt');
+        return;
+      }
+
+      cur = idx;
+      const b = blocks[idx];
+      const off = Math.abs(px - (b.x + b.w / 2));
+      if (off < unit * 2.2) {
+        state.score += 2;
+        state.label = '正中中心 +2';
+        state.events.push('line');
+      } else {
+        state.score += 1;
+        state.label = '+1';
+        state.events.push('eat');
+      }
+      labelTtl = 900;
+
+      spawnNext();
+      camTarget = Math.max(0, px - W * 0.34);
+    }
+
+    reset();
+
+    return {
+      state,
+      // 蓄力语义靠 press/release，宿主不要连发
+      holdRepeat: false,
+      reset,
+      resize(w, h) {
+        if (w <= 0 || h <= 0) return;
+        W = w;
+        H = h;
+        groundY = H * 0.62;
+        unit = W / 100;
+        if (!blocks.length) reset();
+      },
+      press(a) {
+        if (a !== 'a') return;
+        if (state.over || jumping || falling || charging) return;
+        charging = true;
+        power = 0;
+        labelTtl = 0;
+      },
+      release(a) {
+        if (a !== 'a' || !charging) return;
+        startJump();
+      },
+      input() {},
+      canRevive() {
+        return state.over;
+      },
+      revive() {
+        state.over = false;
+        state.events.length = 0;
+        falling = false;
+        jumping = false;
+        charging = false;
+        power = 0;
+        fallSpeed = 0;
+        jElapsed = 0;
+        state.label = '';
+        labelTtl = 0;
+
+        const b = blocks[cur];
+        if (!b) return;
+        px = b.x + b.w / 2;
+        py = groundY;
+        camTarget = Math.max(0, px - W * 0.34);
+        camX = camTarget;
+        if (blocks.length <= cur + 1) spawnNext();
+      },
+      update(dt) {
+        if (state.over || unit <= 0) return;
+
+        camX += (camTarget - camX) * Math.min(1, dt / 110);
+        if (labelTtl > 0) {
+          labelTtl -= dt;
+          if (labelTtl <= 0) state.label = '';
+        }
+
+        if (falling) {
+          fallSpeed += dt * 0.0026;
+          py += fallSpeed * dt;
+          if (py > H + unit * 16) {
+            state.over = true;
+            state.events.push('over');
+          }
+          return;
+        }
+
+        if (charging) {
+          power = Math.min(1, power + dt * 0.0017);
+          state.label = '蓄力 ' + Math.round(power * 100) + '%';
+          return;
+        }
+
+        if (jumping) {
+          jElapsed += dt;
+          const t = Math.max(0, Math.min(1, jElapsed / jDur));
+          px = jFrom + (jTo - jFrom) * t;
+          py = groundY - Math.sin(t * Math.PI) * jPeak;
+          if (t >= 1) {
+            py = groundY;
+            jumping = false;
+            land();
+          }
+        }
+      },
+      render(ctx, w, h) {
+        ctx.fillStyle = C.bg;
+        ctx.fillRect(0, 0, w, h);
+        if (unit <= 0) return;
+
+        // 远景地平线
+        const horizon = groundY + (h - groundY) * 0.62;
+        ctx.strokeStyle = C.grid;
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.moveTo(0, horizon);
+        ctx.lineTo(w, horizon);
+        ctx.stroke();
+
+        // 方块
+        const bh = h - groundY;
+        blocks.forEach((b) => {
+          const sx = b.x - camX;
+          if (sx > w + unit * 26 || sx + b.w < -unit * 26) return;
+          fillRR(ctx, sx, groundY, b.w, bh, unit * 2.6, b.color);
+          ctx.globalAlpha = 0.16;
+          fillRR(ctx, sx, groundY, b.w, unit * 2.2, unit * 1.6, C.light);
+          ctx.globalAlpha = 1;
+        });
+
+        // 影子
+        if (!falling) {
+          ctx.globalAlpha = 0.3;
+          ctx.fillStyle = '#000';
+          ctx.beginPath();
+          ctx.ellipse(px - camX, groundY + unit * 1.4, unit * 3.2, unit * 0.9, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.globalAlpha = 1;
+        }
+
+        // 角色：蓄力时压扁变宽
+        const squash = charging ? power : 0;
+        const bodyW = unit * 7 * (1 + squash * 0.34);
+        const bodyH = unit * 12 * (1 - squash * 0.36);
+        const sx2 = px - camX;
+        fillRR(ctx, sx2 - bodyW / 2, py - bodyH, bodyW, bodyH, unit * 2.4, C.light);
+        ctx.fillStyle = C.brand2;
+        ctx.beginPath();
+        ctx.arc(sx2, py - bodyH - unit * 1.4, unit * 2.8 * (1 - squash * 0.2), 0, Math.PI * 2);
+        ctx.fill();
+
+        // 蓄力条
+        if (charging) {
+          const barW = w * 0.56;
+          const barX = (w - barW) / 2;
+          const barY = h - unit * 13;
+          fillRR(ctx, barX, barY, barW, unit * 3, unit * 1.5, C.darkPanel);
+          if (power > 0.01) {
+            fillRR(ctx, barX, barY, barW * power, unit * 3, unit * 1.5, C.brand);
+          }
+        }
+      },
+    };
+  }
+
+  /* ================================================================
      对外接口
      ================================================================ */
   const META = [
+    {
+      key: 'jump', name: '跳一跳', desc: '按住蓄力松开起跳，摔倒可无限复活',
+      icon: 'jump', hint: '按住「跳」蓄力，松开起跳', pad: 'single', action: '跳',
+    },
     {
       key: 'snake', name: '贪吃蛇', desc: '吃到红色的果子，别撞墙也别咬到自己',
       icon: 'snake', hint: '方向键转向',
@@ -1189,6 +1468,7 @@
   ];
 
   const FACTORY = {
+    jump: Jump,
     snake: Snake,
     tetris: Tetris,
     sokoban: Sokoban,

@@ -2,6 +2,7 @@ package com.jiangjinhao.zuocai
 
 import android.content.Intent
 import android.graphics.drawable.Drawable
+import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -24,6 +25,7 @@ import com.jiangjinhao.zuocai.data.RecipeCategory
 import com.jiangjinhao.zuocai.data.RecipeDb
 import com.jiangjinhao.zuocai.data.RecipeParser
 import com.jiangjinhao.zuocai.data.Variant
+import com.jiangjinhao.zuocai.data.VideoLink
 import com.jiangjinhao.zuocai.databinding.ActivityDetailBinding
 import com.jiangjinhao.zuocai.databinding.ItemIngredientViewBinding
 import com.jiangjinhao.zuocai.databinding.ItemStepViewBinding
@@ -113,6 +115,7 @@ class DetailActivity : AppCompatActivity() {
         binding.detailDescription.text = desc.ifBlank { getString(R.string.detail_empty_desc) }
 
         bindCover(recipe)
+        bindVideo(recipe)
         bindIngredients(shown?.ingredients ?: recipe.ingredients)
         bindSteps(shown?.steps ?: recipe.steps)
         bindVariantChips(recipe)
@@ -219,7 +222,9 @@ class DetailActivity : AppCompatActivity() {
         executor.execute {
             val result = LlmClient.generateVariant(this, base, request)
             ui.post {
-                progress.dismiss()
+                // 生成要好几秒，其间用户很可能已经退出详情页
+                runCatching { progress.dismiss() }
+                if (isFinishing || isDestroyed) return@post
                 result.fold(
                     onSuccess = { text ->
                         val parsed = RecipeParser.parse(text)
@@ -354,6 +359,55 @@ class DetailActivity : AppCompatActivity() {
                 binding.cover.setImageBitmap(bmp)
             }
         }
+    }
+
+    // ---------------------------------------------------------------- 视频
+
+    private fun bindVideo(recipe: Recipe) {
+        val url = recipe.videoUrl.trim()
+        // 变体预览时不显示，避免误以为预览里的做法带了这个视频
+        if (url.isEmpty() || pending != null) {
+            binding.videoCard.visibility = View.GONE
+            return
+        }
+        val type = recipe.videoType.takeIf { it.isNotBlank() } ?: VideoLink.detect(url)
+        val site = VideoLink.siteLabel(url)
+
+        binding.videoCard.visibility = View.VISIBLE
+        binding.videoTitle.text = getString(R.string.video_card_title_fmt, site)
+        binding.videoSub.text = if (VideoLink.canPlayInside(url, type)) {
+            getString(R.string.video_card_sub)
+        } else {
+            getString(R.string.video_kind_outside)
+        }
+        binding.videoCard.setOnClickListener { openVideo(url, type, site) }
+    }
+
+    private fun openVideo(url: String, type: String, site: String) {
+        val title = getString(R.string.video_card_title_fmt, site)
+
+        // 直链和 B 站能就地播，直接进播放页
+        if (VideoLink.canPlayInside(url, type)) {
+            VideoActivity.start(this, url, type, title)
+            return
+        }
+
+        // 小红书这类平台内嵌不可靠：给用户自己选，别硬塞 WebView 让人撞登录页
+        AlertDialog.Builder(this)
+            .setTitle(R.string.video_pick_title)
+            .setMessage(getString(R.string.video_pick_msg, site))
+            .setNegativeButton(R.string.cancel, null)
+            .setNeutralButton(R.string.video_open_with_app) { _, _ -> openOutside(url) }
+            .setPositiveButton(R.string.video_open_inside) { _, _ ->
+                VideoActivity.start(this, url, type, title)
+            }
+            .show()
+    }
+
+    /** 交给系统：装了小红书就唤起，否则浏览器 */
+    private fun openOutside(url: String) {
+        val ok = runCatching { startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) }.isSuccess
+        if (!ok) toast(getString(R.string.video_no_app))
     }
 
     private fun bindIngredients(items: List<Ingredient>) {

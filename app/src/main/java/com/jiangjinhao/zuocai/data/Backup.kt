@@ -263,7 +263,9 @@ object Backup {
                 description = parsed.tips,
                 servings = parsed.servings,
                 minutes = parsed.minutes,
-                difficulty = Difficulty.normalize(parsed.difficulty)
+                difficulty = Difficulty.normalize(parsed.difficulty),
+                videoUrl = parsed.videoUrl,
+                videoType = parsed.videoType
             )
             parsed.ingredients.forEach { recipe.ingredients.add(Ingredient(it.name, it.amount)) }
             parsed.steps.forEach { recipe.steps.add(it) }

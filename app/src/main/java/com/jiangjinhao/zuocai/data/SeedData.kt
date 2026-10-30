@@ -20,9 +20,6 @@ object SeedData {
     private const val ASSET = "default_recipes.txt"
     private const val COVER_DIR = "covers"
 
-    /** 旧版本自动写入的 3 道演示菜，用户不需要，升级时顺手清掉 */
-    private val LEGACY_SAMPLES = setOf("西红柿炒鸡蛋", "可乐鸡翅", "番茄蛋花汤")
-
     private val RE_COVER = Regex("@封面[：:]\\s*([A-Za-z0-9_-]+)")
 
     /**
@@ -48,18 +45,6 @@ object SeedData {
 
         Backup.import(db, text)
         return applyCovers(db, covers)
-    }
-
-    /** 删除旧版演示菜，返回实际删掉的条数 */
-    fun removeLegacySamples(db: RecipeDb): Int {
-        var removed = 0
-        db.list().forEach { recipe ->
-            if (recipe.name.trim() in LEGACY_SAMPLES) {
-                db.delete(recipe.id)
-                removed++
-            }
-        }
-        return removed
     }
 
     /**

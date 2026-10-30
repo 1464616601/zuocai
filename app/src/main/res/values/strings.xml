@@ -74,6 +74,7 @@
     <string name="untitled">未命名</string>
     <string name="image_load_failed">图片读取失败</string>
     <string name="save_failed">保存失败，请重试</string>
+    <string name="delete_failed">删除失败，请重试</string>
 
     <string name="recipe_count">共 %1$d 道菜谱</string>
     <string name="search_empty_title">没有找到菜谱</string>
@@ -149,6 +150,8 @@
     <string name="game_over_best">最高分 %1$d</string>
     <string name="game_again">再来一局</string>
     <string name="game_to_list">返回游戏列表</string>
+    <string name="game_revive">复活继续</string>
+    <string name="game_revive_hint">无限复活</string>
     <string name="game_score_label">本局</string>
     <string name="game_best_label">最高</string>
     <string name="game_over_score_label">得分</string>
@@ -158,6 +161,7 @@
     <string name="export_done_title">导出成功</string>
     <string name="export_done_msg">已导出 %1$d 道菜谱。\n\n把文件传到新手机，用同一页的「导入」选它就能还原。\n\n注意：TXT 只能带文字，封面图不会一起导出。</string>
     <string name="export_failed">导出失败，换个保存位置再试</string>
+    <string name="export_variants_warn">注意：%1$d 道菜有「换个做法」生成的备用做法，TXT 只能带走主做法。</string>
     <string name="import_read_failed">文件读取失败</string>
     <string name="import_empty">文件里没识别到菜谱。请确认是用本 App 导出的 TXT，或符合「# 菜名 / ### 食材 / ### 步骤」的格式。</string>
     <string name="import_done_title">导入完成</string>
@@ -215,6 +219,25 @@
     <string name="shopping_deleted">已删除</string>
     <string name="shopping_cleared">已清空</string>
     <string name="dialog_delete">删除</string>
+
+    <!-- 视频 -->
+    <string name="label_video_optional">视频（选填）</string>
+    <string name="video_hint">粘贴视频链接或整段分享文案\n支持小红书 / B 站 / 抖音 / mp4 直链</string>
+    <string name="video_detected_fmt">已识别：%1$s · %2$s</string>
+    <string name="video_kind_inside">可在 App 内播放</string>
+    <string name="video_kind_outside">需跳转浏览器或原 App</string>
+    <string name="video_clear">清除视频</string>
+    <string name="video_card_title_fmt">%1$s 视频</string>
+    <string name="video_card_sub">点一下开始播放</string>
+    <string name="video_play">播放</string>
+    <string name="video_open_inside">在应用内打开</string>
+    <string name="video_open_external">浏览器打开</string>
+    <string name="video_open_with_app">用其他 App 打开</string>
+    <string name="video_pick_title">怎么打开这个视频？</string>
+    <string name="video_pick_msg">%1$s 不允许网页内嵌播放，应用内打开可能会跳到登录页。</string>
+    <string name="video_invalid">没识别出链接，请确认是 http(s):// 开头的地址</string>
+    <string name="video_play_failed">视频播放失败，链接可能已失效</string>
+    <string name="video_no_app">没找到能打开该链接的应用</string>
 
     <string name="backup_zip_msg">打包菜谱文本、做法变体和封面图，导入 zip 可完整还原（旧版 TXT 仍可导入）。</string>
     <string name="backup_zip_done">备份完成（%1$d 道菜、%2$d 张封面）</string>

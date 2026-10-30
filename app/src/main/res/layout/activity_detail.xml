@@ -81,10 +81,10 @@
                         android:id="@+id/detailName"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
+                        android:fontFamily="sans-serif-medium"
+                        android:lineSpacingExtra="3dp"
                         android:textColor="@color/text_primary"
-                        android:textSize="23sp"
-                        android:textStyle="bold"
-                        android:lineSpacingExtra="3dp" />
+                        android:textSize="23sp" />
 
                     <!-- 信息行 -->
                     <LinearLayout
@@ -164,6 +164,75 @@
                         android:textColor="@color/text_secondary"
                         android:textSize="14sp" />
 
+                    <!-- 做菜视频 -->
+                    <com.google.android.material.card.MaterialCardView
+                        android:id="@+id/videoCard"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="16dp"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:foreground="?attr/selectableItemBackground"
+                        android:visibility="gone"
+                        app:cardBackgroundColor="@color/surface_sunken"
+                        app:cardCornerRadius="16dp"
+                        app:cardElevation="0dp">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal"
+                            android:paddingStart="14dp"
+                            android:paddingTop="13dp"
+                            android:paddingEnd="12dp"
+                            android:paddingBottom="13dp">
+
+                            <ImageView
+                                android:layout_width="34dp"
+                                android:layout_height="34dp"
+                                android:background="@drawable/bg_circle_brand"
+                                android:contentDescription="@null"
+                                android:padding="8dp"
+                                android:src="@drawable/ic_play" />
+
+                            <LinearLayout
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_marginStart="12dp"
+                                android:layout_weight="1"
+                                android:orientation="vertical">
+
+                                <TextView
+                                    android:id="@+id/videoTitle"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:ellipsize="end"
+                                    android:maxLines="1"
+                                    android:textColor="@color/text_primary"
+                                    android:textSize="14sp"
+                                    android:textStyle="bold" />
+
+                                <TextView
+                                    android:id="@+id/videoSub"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginTop="3dp"
+                                    android:ellipsize="end"
+                                    android:maxLines="1"
+                                    android:textColor="@color/text_tertiary"
+                                    android:textSize="11sp" />
+                            </LinearLayout>
+
+                            <ImageView
+                                android:layout_width="20dp"
+                                android:layout_height="20dp"
+                                android:alpha="0.45"
+                                android:contentDescription="@null"
+                                android:src="@drawable/ic_chevron_right" />
+                        </LinearLayout>
+                    </com.google.android.material.card.MaterialCardView>
+
                     <View
                         android:layout_width="match_parent"
                         android:layout_height="1dp"
@@ -175,10 +244,10 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="20dp"
+                        android:fontFamily="sans-serif-medium"
                         android:text="@string/detail_ingredients"
                         android:textColor="@color/text_primary"
-                        android:textSize="16sp"
-                        android:textStyle="bold" />
+                        android:textSize="16sp" />
 
                     <LinearLayout
                         android:id="@+id/ingredientContainer"
@@ -198,10 +267,10 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="20dp"
+                        android:fontFamily="sans-serif-medium"
                         android:text="@string/detail_steps"
                         android:textColor="@color/text_primary"
-                        android:textSize="16sp"
-                        android:textStyle="bold" />
+                        android:textSize="16sp" />
 
                     <LinearLayout
                         android:id="@+id/stepContainer"

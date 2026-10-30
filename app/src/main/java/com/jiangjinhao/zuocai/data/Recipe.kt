@@ -89,7 +89,10 @@ data class Recipe(
     var createdAt: Long = 0L,
     var updatedAt: Long = 0L,
     var variants: MutableList<Variant> = mutableListOf(),
-    var pinned: Boolean = false
+    var pinned: Boolean = false,
+    /** 做菜视频链接，空串表示没配。类型见 [VideoLink] */
+    var videoUrl: String = "",
+    var videoType: String = ""
 ) {
 
     /** 搜索用的全文（菜名 + 描述 + 食材名） */

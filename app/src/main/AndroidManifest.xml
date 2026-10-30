@@ -31,10 +31,20 @@
             android:name=".DetailActivity"
             android:exported="false" />
 
+        <!-- configChanges：编辑页有未落库的草稿（新封面文件、视频输入），
+             旋转重建会丢一半状态，直接自己处理 -->
         <activity
             android:name=".EditActivity"
+            android:configChanges="orientation|screenSize|keyboardHidden"
             android:exported="false"
             android:windowSoftInputMode="adjustResize" />
+
+        <!-- 视频播放：直链用 VideoView，其余走 WebView -->
+        <activity
+            android:name=".VideoActivity"
+            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:exported="false"
+            android:theme="@style/Theme.Zuocai" />
 
         <activity
             android:name=".SettingsActivity"

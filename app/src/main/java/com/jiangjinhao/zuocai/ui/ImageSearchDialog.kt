@@ -221,12 +221,14 @@ class ImageSearchDialog(
         executor.execute {
             val bmp = runCatching { ImageSearch.fetchCover(item) }.getOrNull()
             main.post {
+                // 下载期间用户可能已经关掉对话框或离开编辑页
+                if (activity.isFinishing || activity.isDestroyed) return@post
                 busy = false
                 progress.visibility = View.GONE
                 if (bmp != null) {
                     onPicked(bmp)
                     dialog?.dismiss()
-                } else if (activity.isFinishing.not()) {
+                } else {
                     grid.visibility = View.VISIBLE
                     status.visibility = View.GONE
                     Toast.makeText(activity, R.string.net_image_failed, Toast.LENGTH_SHORT).show()

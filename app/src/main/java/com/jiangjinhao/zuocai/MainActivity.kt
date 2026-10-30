@@ -80,10 +80,9 @@ class MainActivity : AppCompatActivity() {
     private fun seedIfNeeded() {
         val prefs = getSharedPreferences(PREFS, MODE_PRIVATE)
         if (prefs.getBoolean(KEY_SEEDED, false)) return
-        runCatching {
-            SeedData.removeLegacySamples(db)
-            SeedData.insert(this, db)
-        }
+        // 这里只补默认菜谱，不再按菜名删旧演示数据：
+        // 老版本那三道演示菜可能被用户改成了自己的菜，按名字删会误伤
+        runCatching { SeedData.insert(this, db) }
         prefs.edit().putBoolean(KEY_SEEDED, true).apply()
     }
 
@@ -297,6 +296,7 @@ class MainActivity : AppCompatActivity() {
         popup.menu.add(0, 2, 1, getString(R.string.sort_name))
         popup.menu.add(0, 3, 2, getString(R.string.sort_usage))
         // 分组 2：和排序不是一类，中间会有分隔感（部分 ROM 不画线，但顺序清楚）
+        // 买菜清单不放在这里：主页顶部已经有购物车图标了，重复入口反而迷惑
         popup.menu.add(2, 4, 3, getString(R.string.menu_games))
         popup.setOnMenuItemClickListener { item ->
             when (item.itemId) {

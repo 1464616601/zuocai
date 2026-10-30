@@ -30,6 +30,7 @@ import com.jiangjinhao.zuocai.data.Recipe
 import com.jiangjinhao.zuocai.data.RecipeCategory
 import com.jiangjinhao.zuocai.data.RecipeDb
 import com.jiangjinhao.zuocai.data.RecipeParser
+import com.jiangjinhao.zuocai.data.VideoLink
 import com.jiangjinhao.zuocai.databinding.ActivityEditBinding
 import com.jiangjinhao.zuocai.ui.ImageSearchDialog
 import com.jiangjinhao.zuocai.util.ImageStore
@@ -58,6 +59,25 @@ class EditActivity : AppCompatActivity() {
 
     private var dirty = false
     private var suppressWatcher = false
+    private var suppressVideoWatcher = false
+
+    /**
+     * 用户主动点过「清除视频」。
+     *
+     * 文本框里的 `@视频：` 行还会被解析出来，这里标记一下，
+     * 免得用户清空后又去编辑菜谱正文，视频被自动填回来。
+     */
+    private var videoCleared = false
+
+    /**
+     * 用户手动改过「人份 / 时长 / 难度」。
+     *
+     * 正文里的 `@份量/@时长/@难度` 会在每次解析后回写这三个输入框，
+     * 而 `stringify()` 一定会输出 `@分类/@难度`，所以只要编辑已有菜谱就必然触发。
+     * 不加这个开关的话，用户改完数字、再在正文里打一个字，改动就被静默改回去了。
+     */
+    private var metaEditedByUser = false
+    private var suppressMetaWatcher = false
     private var userPickedCategory = false
     private var pendingCameraFile: File? = null
     private var previewExpanded = false
@@ -104,6 +124,7 @@ class EditActivity : AppCompatActivity() {
             binding.minutesInput.setText(if (src.minutes > 0) src.minutes.toString() else "")
             userPickedCategory = true
             setTextSafely(RecipeParser.stringify(src))
+            binding.videoInput.setText(src.videoUrl)
         } else {
             binding.editTitle.text = getString(R.string.edit_title_new)
             binding.servingsInput.setText("2")
@@ -112,6 +133,7 @@ class EditActivity : AppCompatActivity() {
         renderDifficulty()
         renderCategoryChips()
         renderCover()
+        renderVideoState()
         runParse()
         dirty = false
     }
@@ -147,6 +169,15 @@ class EditActivity : AppCompatActivity() {
         binding.aiButton.setOnClickListener { onAiClick() }
         binding.configButton.setOnClickListener { openSettings() }
 
+        binding.videoClear.setOnClickListener {
+            suppressVideoWatcher = true
+            binding.videoInput.setText("")
+            suppressVideoWatcher = false
+            videoCleared = true
+            dirty = true
+            renderVideoState()
+        }
+
         binding.coverPick.setOnClickListener { showCoverOptions() }
         binding.coverClear.setOnClickListener {
             pickedCover?.let { ImageStore.delete(this, it) }
@@ -163,6 +194,7 @@ class EditActivity : AppCompatActivity() {
                 else -> Difficulty.EASY
             }
             dirty = true
+            metaEditedByUser = true
             renderDifficulty()
         }
     }
@@ -187,10 +219,25 @@ class EditActivity : AppCompatActivity() {
         val numberWatcher = object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) = Unit
             override fun onTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) = Unit
-            override fun afterTextChanged(s: Editable?) { dirty = true }
+            override fun afterTextChanged(s: Editable?) {
+                if (suppressMetaWatcher) return
+                dirty = true
+                metaEditedByUser = true
+            }
         }
         binding.servingsInput.addTextChangedListener(numberWatcher)
         binding.minutesInput.addTextChangedListener(numberWatcher)
+
+        binding.videoInput.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) = Unit
+            override fun onTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) = Unit
+            override fun afterTextChanged(s: Editable?) {
+                if (suppressVideoWatcher) return
+                if (!s.isNullOrBlank()) videoCleared = false
+                dirty = true
+                renderVideoState()
+            }
+        })
     }
 
     private fun setupBackHandler() {
@@ -236,10 +283,12 @@ class EditActivity : AppCompatActivity() {
         }
 
         // 文本里带 @分类/@时长/@份量/@难度 时（导出文件就是这个格式），
-        // 把数值同步到「更多选项」，否则从备份导入的菜谱会丢掉这些信息
+        // 把数值同步到「更多选项」，否则从备份导入的菜谱会丢掉这些信息。
+        // 用户一旦自己动过这三项，就不再回写——否则改完数字再动正文会被静默改回去。
         val hasMeta = text.lineSequence().any { it.trimStart().startsWith("@") }
-        if (hasMeta) {
+        if (hasMeta && !metaEditedByUser) {
             val wasDirty = dirty
+            suppressMetaWatcher = true
             if (parsed.servings > 0) {
                 binding.servingsInput.setText(parsed.servings.toString())
             }
@@ -248,8 +297,53 @@ class EditActivity : AppCompatActivity() {
             )
             difficulty = Difficulty.normalize(parsed.difficulty)
             renderDifficulty()
+            suppressMetaWatcher = false
             dirty = wasDirty
         }
+
+        // 文本框里带 `@视频：` 时（比如导入的 TXT）回填到视频输入框；
+        // 输入框已有内容就以输入框为准，别用旧文本覆盖用户刚改的值
+        if (parsed.videoUrl.isNotBlank() && !videoCleared && binding.videoInput.text.isNullOrBlank()) {
+            val wasDirty = dirty
+            suppressVideoWatcher = true
+            binding.videoInput.setText(parsed.videoUrl)
+            suppressVideoWatcher = false
+            renderVideoState()
+            dirty = wasDirty
+        }
+    }
+
+    // ---------------------------------------------------------------- 视频
+
+    private fun renderVideoState() {
+        val raw = binding.videoInput.text?.toString().orEmpty()
+        val url = VideoLink.normalizeInput(raw)
+
+        if (url.isEmpty()) {
+            if (raw.isBlank()) {
+                binding.videoState.visibility = View.GONE
+                binding.videoClear.visibility = View.GONE
+            } else {
+                // 填了东西却抠不出链接：说清楚，别让用户以为已经存上了
+                binding.videoState.setText(R.string.video_invalid)
+                binding.videoState.setTextColor(ContextCompat.getColor(this, R.color.danger))
+                binding.videoState.visibility = View.VISIBLE
+                binding.videoClear.visibility = View.VISIBLE
+            }
+            return
+        }
+
+        val type = VideoLink.detect(url)
+        val kind = if (VideoLink.canPlayInside(url, type)) {
+            R.string.video_kind_inside
+        } else {
+            R.string.video_kind_outside
+        }
+        binding.videoState.text =
+            getString(R.string.video_detected_fmt, VideoLink.siteLabel(url), getString(kind))
+        binding.videoState.setTextColor(ContextCompat.getColor(this, R.color.text_tertiary))
+        binding.videoState.visibility = View.VISIBLE
+        binding.videoClear.visibility = View.VISIBLE
     }
 
     private fun buildSummary(p: RecipeParser.Parsed): String {
@@ -660,11 +754,17 @@ class EditActivity : AppCompatActivity() {
             else -> originCover
         }
 
-        val ok = runCatching {
-            if (recipeId > 0) db.update(recipe) else db.insert(recipe)
-        }.isSuccess
+        // 视频以输入框为准：没有 `@视频：` 行的菜谱，正文解析不出链接，只能从这里拿
+        val videoUrl = VideoLink.normalizeInput(binding.videoInput.text?.toString())
+        recipe.videoUrl = videoUrl
+        recipe.videoType = if (videoUrl.isEmpty()) "" else VideoLink.detect(videoUrl)
 
-        if (!ok) {
+        // insert 失败返回 -1、update 影响 0 行都不抛异常，只看 isSuccess 会把失败当成功
+        val rows = runCatching {
+            if (recipeId > 0) db.update(recipe) else if (db.insert(recipe) > 0) 1 else 0
+        }.getOrDefault(0)
+
+        if (rows <= 0) {
             Toast.makeText(this, R.string.save_failed, Toast.LENGTH_SHORT).show()
             return
         }
@@ -688,7 +788,12 @@ class EditActivity : AppCompatActivity() {
     }
 
     private fun doDelete() {
-        runCatching { db.delete(recipeId) }
+        // 先确认记录真的删掉了，再清理封面文件——顺序反了会出现「菜还在但没图」
+        val rows = runCatching { db.delete(recipeId) }.getOrDefault(0)
+        if (rows <= 0) {
+            Toast.makeText(this, R.string.delete_failed, Toast.LENGTH_SHORT).show()
+            return
+        }
         ImageStore.delete(this, originCover)
         ImageStore.delete(this, pickedCover)
         pickedCover = null

@@ -41,7 +41,9 @@
 
   const RE_ING_HEAD = new RegExp(`^(${ING_WORDS})[：:]?$`);
   const RE_STEP_HEAD = new RegExp(`^(${STEP_WORDS})[：:]?$`);
-  const RE_TIP_HEAD = new RegExp(`^(${TIP_WORDS})[：:]?`, 'i');
+  // 贴士必须「独占一行」或「带冒号」：否则「注意油温再下锅」这种步骤行
+  // 会被误判成贴士，把后面的步骤全吞进 tips
+  const RE_TIP_HEAD = new RegExp(`^(${TIP_WORDS})(?:[：:]\\s*(.*))?$`, 'i');
   const RE_ING_INLINE = new RegExp(`^(${ING_WORDS})[：:]\\s*(.+)$`);
   const RE_STEP_INLINE = new RegExp(`^(${STEP_WORDS})[：:]\\s*(.+)$`);
   const RE_NAME_INLINE = new RegExp(`^(${NAME_WORDS})[：:]\\s*(.+)$`);
@@ -54,6 +56,88 @@
   const STEP_BULLET = /^\s*[-*•·]\s+/;
 
   const ING_SPLIT = /[、，,；;]+/;
+
+  // ---------------------------------------------------------------- 视频链接
+  // 和 Kotlin 端 data/VideoLink.kt 保持同一套规则
+
+  const VIDEO_DIRECT_EXT = ['.mp4', '.m3u8', '.webm', '.mov', '.m4v'];
+  const VIDEO_TRAILING = '，。；、）】」』》》,;！？…';
+  // 排掉中文标点：分享文案常写成 `http://xhslink.com/a/xxx，复制本条信息`，中间没有空格
+  const RE_VIDEO_URL = /https?:\/\/[^\s<>"'，。；、）】」』》！？…]+/i;
+  const RE_BV = /BV[0-9A-Za-z]{10}/;
+
+  function trimVideoTail(u) {
+    let s = String(u || '');
+    while (s && VIDEO_TRAILING.includes(s[s.length - 1])) s = s.slice(0, -1);
+    return s;
+  }
+
+  /** 从任意文本里取视频地址（兼容整段分享文案） */
+  function extractVideoUrl(raw) {
+    const text = String(raw || '').trim();
+    if (!text) return '';
+    // 统一走正则：URL 本身不含空格和中文标点，开头截断和中间截断是同一套规则
+    const m = text.match(RE_VIDEO_URL);
+    return m ? trimVideoTail(m[0]) : '';
+  }
+
+  /**
+   * 输入框专用：允许只填 `b23.tv/abc` 这种不带协议头的地址。
+   * 只在「整串看起来像一个域名」时才补 https://，避免把中文正文硬拼成链接。
+   */
+  function normalizeVideoUrl(raw) {
+    const text = String(raw || '').trim();
+    if (!text) return '';
+    const direct = extractVideoUrl(text);
+    if (direct) return direct;
+
+    const head = text.split('\n')[0].split(' ')[0].trim();
+    if (head.length >= 4 && head.length <= 300 && head.includes('.') && !head.includes(' ') &&
+        !/^https?:\/\//i.test(head)) {
+      return extractVideoUrl('https://' + head);
+    }
+    return '';
+  }
+
+  /** direct / bilibili / external，空串表示没有视频 */
+  function detectVideoType(url) {
+    const u = String(url || '').trim().toLowerCase();
+    if (!u) return '';
+    if (u.includes('bilibili.com') || u.includes('b23.tv')) return 'bilibili';
+
+    const path = u.split('?')[0].split('#')[0];
+    if (VIDEO_DIRECT_EXT.some((ext) => path.endsWith(ext))) return 'direct';
+    return 'external';
+  }
+
+  /** B 站官方播放器地址；解析不出 BV 号返回 null */
+  function bilibiliEmbed(url) {
+    const m = String(url || '').match(RE_BV);
+    if (!m) return null;
+    return 'https://player.bilibili.com/player.html?bvid=' + m[0] +
+      '&autoplay=0&high_quality=1&danmaku=0';
+  }
+
+  function videoCanPlayInside(url, type) {
+    const t = type || detectVideoType(url);
+    if (t === 'direct') return true;
+    if (t === 'bilibili') return !!bilibiliEmbed(url);
+    return false;
+  }
+
+  function videoSiteLabel(url) {
+    const u = String(url || '').toLowerCase();
+    if (u.includes('xiaohongshu.com') || u.includes('xhslink.com')) return '小红书';
+    if (u.includes('bilibili.com') || u.includes('b23.tv')) return '哔哩哔哩';
+    if (u.includes('douyin.com') || u.includes('iesdouyin.com')) return '抖音';
+    if (u.includes('kuaishou.com')) return '快手';
+    if (u.includes('weibo.com') || u.includes('weibo.cn')) return '微博';
+    if (u.includes('ixigua.com')) return '西瓜视频';
+    if (u.includes('youtube.com') || u.includes('youtu.be')) return 'YouTube';
+    if (u.includes('mp.weixin.qq.com')) return '公众号';
+    if (u.includes('zhihu.com')) return '知乎';
+    return '视频';
+  }
 
   /** 去掉 Markdown 标记，保留文字 */
   // 导出 TXT 用的中文名（和 Kotlin 端 RecipeCategory.textOf / Difficulty.textOf 对齐）
@@ -139,7 +223,7 @@
   function parseRecipe(text) {
     const result = {
       name: '', ingredients: [], steps: [], tips: '',
-      category: 'home', ok: false, hints: [],
+      category: 'home', videoUrl: '', videoType: '', ok: false, hints: [],
     };
     const rawText = String(text || '').replace(/\r\n?/g, '\n');
     if (!rawText.trim()) return result;
@@ -166,8 +250,9 @@
       }
 
       // ---- 1. 贴士（优先级最高，"小贴士："开头的行不进正文）
-      if (RE_TIP_HEAD.test(plain)) {
-        const body = plain.replace(new RegExp(`^(${TIP_WORDS})[：:]?`, 'i'), '').trim();
+      const mTip = plain.match(RE_TIP_HEAD);
+      if (mTip) {
+        const body = String(mTip[2] || '').trim();
         if (body) tipLines.push(body);
         mode = 'tip';
         continue;
@@ -311,6 +396,10 @@
     result.servings = firstInt(meta['份量']) ?? 2;
     result.difficulty = parseDifficulty(meta['难度']);
 
+    // `@视频：` 里可能粘的是整段分享文案，抠出真正的链接再判类型
+    result.videoUrl = normalizeVideoUrl(meta['视频'] || meta['video'] || '');
+    result.videoType = result.videoUrl ? detectVideoType(result.videoUrl) : '';
+
     if (!result.name) result.hints.push('没识别到菜名，可在第一行写 # 菜名');
     if (!result.ingredients.length) result.hints.push('没识别到食材，检查是否有「### 食材」小标题');
     if (!result.steps.length) result.hints.push('没识别到步骤，检查是否有「### 步骤」小标题');
@@ -374,6 +463,9 @@
     if (Number(recipe.minutes) > 0) parts.push(`@时长：${Number(recipe.minutes)}分钟`);
     if (Number(recipe.servings) > 0) parts.push(`@份量：${Number(recipe.servings)}人份`);
     parts.push(`@难度：${DIFF_TEXT[(Number(recipe.difficulty) || 1) - 1] || '简单'}`);
+    if (recipe.videoUrl && String(recipe.videoUrl).trim()) {
+      parts.push(`@视频：${String(recipe.videoUrl).trim()}`);
+    }
 
     parts.push('', '### 食材', ings, '', '### 步骤', steps);
 
@@ -414,5 +506,7 @@
   return {
     parseRecipe, stringifyRecipe, splitIngredient, stripMd, guessCategory,
     exportAll, splitBlocks, suggestFileName,
+    extractVideoUrl, normalizeVideoUrl, detectVideoType, bilibiliEmbed,
+    videoCanPlayInside, videoSiteLabel,
   };
 });

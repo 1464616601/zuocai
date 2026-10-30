@@ -8,14 +8,21 @@ import com.jiangjinhao.zuocai.R
  */
 object GameCatalog {
 
+    /** 底部控制台形态：FULL = 方向键 + A/B，SINGLE = 只留一个大按钮 */
+    enum class Pad { FULL, SINGLE }
+
     data class Meta(
         val key: String,
         val name: String,
         val desc: String,
-        @DrawableRes val icon: Int
+        @DrawableRes val icon: Int,
+        val pad: Pad = Pad.FULL,
+        /** SINGLE 模式下主按钮上的字，null 就用默认的 A */
+        val primaryLabel: String? = null
     )
 
     val ALL = listOf(
+        Meta("jump", "跳一跳", "按住蓄力松开起跳，摔倒可无限复活", R.drawable.ic_game_jump, Pad.SINGLE, "跳"),
         Meta("snake", "贪吃蛇", "吃到红点得分，别撞墙也别咬到自己", R.drawable.ic_game_snake),
         Meta("tetris", "俄罗斯方块", "转一转、堆一堆，消掉整行拿高分", R.drawable.ic_game_tetris),
         Meta("sokoban", "推箱子", "把木箱推到圆点上，共三关", R.drawable.ic_game_box),
@@ -26,6 +33,7 @@ object GameCatalog {
     fun find(key: String?): Meta? = ALL.firstOrNull { it.key == key }
 
     fun create(key: String?): Game? = when (key) {
+        "jump" -> JumpGame()
         "snake" -> SnakeGame()
         "tetris" -> TetrisGame()
         "sokoban" -> SokobanGame()

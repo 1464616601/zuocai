@@ -32,10 +32,10 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:layout_marginStart="6dp"
+            android:fontFamily="sans-serif-medium"
             android:text="@string/edit_title_new"
             android:textColor="@color/text_primary"
-            android:textSize="17sp"
-            android:textStyle="bold" />
+            android:textSize="17sp" />
 
         <TextView
             android:id="@+id/saveButton"
@@ -271,6 +271,58 @@
                     android:layout_marginStart="14dp"
                     android:padding="6dp"
                     android:text="@string/remove_cover"
+                    android:textColor="@color/text_tertiary"
+                    android:textSize="12sp"
+                    android:visibility="gone" />
+            </LinearLayout>
+
+            <!-- 视频 -->
+            <TextView
+                style="@style/TextAppearance.Zuocai.Label"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="18dp"
+                android:text="@string/label_video_optional" />
+
+            <EditText
+                android:id="@+id/videoInput"
+                style="@style/Widget.Zuocai.EditText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:gravity="top|start"
+                android:hint="@string/video_hint"
+                android:importantForAutofill="no"
+                android:inputType="textMultiLine|textUri"
+                android:maxLines="4"
+                android:minLines="1"
+                android:textSize="13sp" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:id="@+id/videoState"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:ellipsize="end"
+                    android:maxLines="1"
+                    android:textColor="@color/text_tertiary"
+                    android:textSize="12sp"
+                    android:visibility="gone" />
+
+                <TextView
+                    android:id="@+id/videoClear"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="10dp"
+                    android:padding="6dp"
+                    android:text="@string/video_clear"
                     android:textColor="@color/text_tertiary"
                     android:textSize="12sp"
                     android:visibility="gone" />

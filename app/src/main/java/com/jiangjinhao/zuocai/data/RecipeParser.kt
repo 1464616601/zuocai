@@ -18,6 +18,9 @@ object RecipeParser {
         val minutes: Int = 0,
         val servings: Int = 2,
         val difficulty: Int = Difficulty.EASY,
+        /** 从 `@视频：` 元信息里读出的链接，空串表示没配 */
+        val videoUrl: String = "",
+        val videoType: String = "",
         val ok: Boolean = false,
         val hints: List<String> = emptyList()
     )
@@ -62,7 +65,13 @@ object RecipeParser {
 
     private val RE_ING_HEAD = Regex("^($ING_WORDS)[：:]?\$")
     private val RE_STEP_HEAD = Regex("^($STEP_WORDS)[：:]?\$")
-    private val RE_TIP_HEAD = Regex("^($TIP_WORDS)[：:]?", RegexOption.IGNORE_CASE)
+    /**
+     * 贴士标记：必须「独占一行」或「带冒号」。
+     *
+     * 原来的写法只要行首出现「注意 / 提示 / 备注」就算贴士，
+     * 于是「注意油温再下锅」这种步骤行会被吞进 tips，后面的步骤也跟着丢失。
+     */
+    private val RE_TIP_HEAD = Regex("^($TIP_WORDS)(?:[：:]\\s*(.*))?\$", RegexOption.IGNORE_CASE)
     private val RE_ING_INLINE = Regex("^($ING_WORDS)[：:]\\s*(.+)\$")
     private val RE_STEP_INLINE = Regex("^($STEP_WORDS)[：:]\\s*(.+)\$")
     private val RE_NAME_INLINE = Regex("^($NAME_WORDS)[：:]\\s*(.+)\$")
@@ -189,8 +198,9 @@ object RecipeParser {
             }
 
             // 1. 小贴士
-            if (RE_TIP_HEAD.containsMatchIn(plain)) {
-                val body = RE_TIP_HEAD.replace(plain, "").trim()
+            val tipMatch = RE_TIP_HEAD.find(plain)
+            if (tipMatch != null) {
+                val body = tipMatch.groupValues.getOrNull(2).orEmpty().trim()
                 if (body.isNotEmpty()) tipLines.add(body)
                 mode = "tip"
                 continue
@@ -326,6 +336,9 @@ object RecipeParser {
 
         val ok = finalName.isNotEmpty() && (deduped.isNotEmpty() || steps.isNotEmpty())
 
+        // `@视频：` 里可能粘的是整段分享文案，抠出真正的链接再判类型
+        val videoUrl = VideoLink.normalizeInput(meta["视频"] ?: meta["video"])
+
         return Parsed(
             name = finalName,
             ingredients = deduped,
@@ -336,6 +349,8 @@ object RecipeParser {
             minutes = firstInt(meta["时长"]) ?: 0,
             servings = firstInt(meta["份量"]) ?: 2,
             difficulty = parseDifficulty(meta["难度"]),
+            videoUrl = videoUrl,
+            videoType = if (videoUrl.isEmpty()) "" else VideoLink.detect(videoUrl),
             ok = ok,
             hints = hints
         )
@@ -404,6 +419,9 @@ object RecipeParser {
             sb.append("@份量：").append(recipe.servings).append("人份\n")
         }
         sb.append("@难度：").append(Difficulty.textOf(recipe.difficulty)).append("\n")
+        if (recipe.videoUrl.isNotBlank()) {
+            sb.append("@视频：").append(recipe.videoUrl.trim()).append("\n")
+        }
 
         sb.append("\n### 食材\n").append(ings).append("\n\n")
         sb.append("### 步骤\n").append(steps)

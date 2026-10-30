@@ -447,6 +447,74 @@ body {
 }
 .desc.muted { color: var(--text-3); }
 
+/* 视频卡片 */
+.video-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 16px;
+  padding: 13px 12px 13px 14px;
+  border-radius: 16px;
+  background: var(--surface-sunken);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.video-card:active { opacity: .8; }
+.video-card .vplay {
+  flex: 0 0 34px;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--brand);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.video-card .vtext {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.video-card .vtext b {
+  font-size: 14px;
+  color: var(--text-1);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.video-card .vtext i {
+  font-style: normal;
+  font-size: 11px;
+  color: var(--text-3);
+}
+.video-card .vgo {
+  flex: 0 0 auto;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--brand);
+}
+
+.video-stage { margin-top: 12px; }
+.video-stage video,
+.video-stage iframe {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border: 0;
+  border-radius: 14px;
+  background: #000;
+}
+
+.video-state {
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--text-3);
+}
+.video-state.bad { color: var(--danger); }
+
 hr.sep {
   border: 0;
   height: 1px;
@@ -1534,6 +1602,15 @@ textarea.field {
   box-shadow: 0 2px 6px rgba(0, 0, 0, .3);
 }
 
+/* 只要一个大按钮的游戏（跳一跳）：大按钮居中 */
+.game-pad.single { justify-content: center; }
+.act-btn.big {
+  width: 96px;
+  height: 96px;
+  font-size: 20px;
+  letter-spacing: .06em;
+}
+
 .gameover .acts { gap: 8px; }
 .gameover .acts button {
   width: 100%;
@@ -1795,7 +1872,9 @@ window.DEFAULT_RECIPES_TEXT = "==========  菜谱 1  ==========\n\n# 轻卡凉�
 
   const RE_ING_HEAD = new RegExp(`^(${ING_WORDS})[：:]?$`);
   const RE_STEP_HEAD = new RegExp(`^(${STEP_WORDS})[：:]?$`);
-  const RE_TIP_HEAD = new RegExp(`^(${TIP_WORDS})[：:]?`, 'i');
+  // 贴士必须「独占一行」或「带冒号」：否则「注意油温再下锅」这种步骤行
+  // 会被误判成贴士，把后面的步骤全吞进 tips
+  const RE_TIP_HEAD = new RegExp(`^(${TIP_WORDS})(?:[：:]\\s*(.*))?$`, 'i');
   const RE_ING_INLINE = new RegExp(`^(${ING_WORDS})[：:]\\s*(.+)$`);
   const RE_STEP_INLINE = new RegExp(`^(${STEP_WORDS})[：:]\\s*(.+)$`);
   const RE_NAME_INLINE = new RegExp(`^(${NAME_WORDS})[：:]\\s*(.+)$`);
@@ -1808,6 +1887,88 @@ window.DEFAULT_RECIPES_TEXT = "==========  菜谱 1  ==========\n\n# 轻卡凉�
   const STEP_BULLET = /^\s*[-*•·]\s+/;
 
   const ING_SPLIT = /[、，,；;]+/;
+
+  // ---------------------------------------------------------------- 视频链接
+  // 和 Kotlin 端 data/VideoLink.kt 保持同一套规则
+
+  const VIDEO_DIRECT_EXT = ['.mp4', '.m3u8', '.webm', '.mov', '.m4v'];
+  const VIDEO_TRAILING = '，。；、）】」』》》,;！？…';
+  // 排掉中文标点：分享文案常写成 `http://xhslink.com/a/xxx，复制本条信息`，中间没有空格
+  const RE_VIDEO_URL = /https?:\/\/[^\s<>"'，。；、）】」』》！？…]+/i;
+  const RE_BV = /BV[0-9A-Za-z]{10}/;
+
+  function trimVideoTail(u) {
+    let s = String(u || '');
+    while (s && VIDEO_TRAILING.includes(s[s.length - 1])) s = s.slice(0, -1);
+    return s;
+  }
+
+  /** 从任意文本里取视频地址（兼容整段分享文案） */
+  function extractVideoUrl(raw) {
+    const text = String(raw || '').trim();
+    if (!text) return '';
+    // 统一走正则：URL 本身不含空格和中文标点，开头截断和中间截断是同一套规则
+    const m = text.match(RE_VIDEO_URL);
+    return m ? trimVideoTail(m[0]) : '';
+  }
+
+  /**
+   * 输入框专用：允许只填 `b23.tv/abc` 这种不带协议头的地址。
+   * 只在「整串看起来像一个域名」时才补 https://，避免把中文正文硬拼成链接。
+   */
+  function normalizeVideoUrl(raw) {
+    const text = String(raw || '').trim();
+    if (!text) return '';
+    const direct = extractVideoUrl(text);
+    if (direct) return direct;
+
+    const head = text.split('\n')[0].split(' ')[0].trim();
+    if (head.length >= 4 && head.length <= 300 && head.includes('.') && !head.includes(' ') &&
+        !/^https?:\/\//i.test(head)) {
+      return extractVideoUrl('https://' + head);
+    }
+    return '';
+  }
+
+  /** direct / bilibili / external，空串表示没有视频 */
+  function detectVideoType(url) {
+    const u = String(url || '').trim().toLowerCase();
+    if (!u) return '';
+    if (u.includes('bilibili.com') || u.includes('b23.tv')) return 'bilibili';
+
+    const path = u.split('?')[0].split('#')[0];
+    if (VIDEO_DIRECT_EXT.some((ext) => path.endsWith(ext))) return 'direct';
+    return 'external';
+  }
+
+  /** B 站官方播放器地址；解析不出 BV 号返回 null */
+  function bilibiliEmbed(url) {
+    const m = String(url || '').match(RE_BV);
+    if (!m) return null;
+    return 'https://player.bilibili.com/player.html?bvid=' + m[0] +
+      '&autoplay=0&high_quality=1&danmaku=0';
+  }
+
+  function videoCanPlayInside(url, type) {
+    const t = type || detectVideoType(url);
+    if (t === 'direct') return true;
+    if (t === 'bilibili') return !!bilibiliEmbed(url);
+    return false;
+  }
+
+  function videoSiteLabel(url) {
+    const u = String(url || '').toLowerCase();
+    if (u.includes('xiaohongshu.com') || u.includes('xhslink.com')) return '小红书';
+    if (u.includes('bilibili.com') || u.includes('b23.tv')) return '哔哩哔哩';
+    if (u.includes('douyin.com') || u.includes('iesdouyin.com')) return '抖音';
+    if (u.includes('kuaishou.com')) return '快手';
+    if (u.includes('weibo.com') || u.includes('weibo.cn')) return '微博';
+    if (u.includes('ixigua.com')) return '西瓜视频';
+    if (u.includes('youtube.com') || u.includes('youtu.be')) return 'YouTube';
+    if (u.includes('mp.weixin.qq.com')) return '公众号';
+    if (u.includes('zhihu.com')) return '知乎';
+    return '视频';
+  }
 
   /** 去掉 Markdown 标记，保留文字 */
   // 导出 TXT 用的中文名（和 Kotlin 端 RecipeCategory.textOf / Difficulty.textOf 对齐）
@@ -1893,7 +2054,7 @@ window.DEFAULT_RECIPES_TEXT = "==========  菜谱 1  ==========\n\n# 轻卡凉�
   function parseRecipe(text) {
     const result = {
       name: '', ingredients: [], steps: [], tips: '',
-      category: 'home', ok: false, hints: [],
+      category: 'home', videoUrl: '', videoType: '', ok: false, hints: [],
     };
     const rawText = String(text || '').replace(/\r\n?/g, '\n');
     if (!rawText.trim()) return result;
@@ -1920,8 +2081,9 @@ window.DEFAULT_RECIPES_TEXT = "==========  菜谱 1  ==========\n\n# 轻卡凉�
       }
 
       // ---- 1. 贴士（优先级最高，"小贴士："开头的行不进正文）
-      if (RE_TIP_HEAD.test(plain)) {
-        const body = plain.replace(new RegExp(`^(${TIP_WORDS})[：:]?`, 'i'), '').trim();
+      const mTip = plain.match(RE_TIP_HEAD);
+      if (mTip) {
+        const body = String(mTip[2] || '').trim();
         if (body) tipLines.push(body);
         mode = 'tip';
         continue;
@@ -2065,6 +2227,10 @@ window.DEFAULT_RECIPES_TEXT = "==========  菜谱 1  ==========\n\n# 轻卡凉�
     result.servings = firstInt(meta['份量']) ?? 2;
     result.difficulty = parseDifficulty(meta['难度']);
 
+    // `@视频：` 里可能粘的是整段分享文案，抠出真正的链接再判类型
+    result.videoUrl = normalizeVideoUrl(meta['视频'] || meta['video'] || '');
+    result.videoType = result.videoUrl ? detectVideoType(result.videoUrl) : '';
+
     if (!result.name) result.hints.push('没识别到菜名，可在第一行写 # 菜名');
     if (!result.ingredients.length) result.hints.push('没识别到食材，检查是否有「### 食材」小标题');
     if (!result.steps.length) result.hints.push('没识别到步骤，检查是否有「### 步骤」小标题');
@@ -2128,6 +2294,9 @@ window.DEFAULT_RECIPES_TEXT = "==========  菜谱 1  ==========\n\n# 轻卡凉�
     if (Number(recipe.minutes) > 0) parts.push(`@时长：${Number(recipe.minutes)}分钟`);
     if (Number(recipe.servings) > 0) parts.push(`@份量：${Number(recipe.servings)}人份`);
     parts.push(`@难度：${DIFF_TEXT[(Number(recipe.difficulty) || 1) - 1] || '简单'}`);
+    if (recipe.videoUrl && String(recipe.videoUrl).trim()) {
+      parts.push(`@视频：${String(recipe.videoUrl).trim()}`);
+    }
 
     parts.push('', '### 食材', ings, '', '### 步骤', steps);
 
@@ -2168,6 +2337,8 @@ window.DEFAULT_RECIPES_TEXT = "==========  菜谱 1  ==========\n\n# 轻卡凉�
   return {
     parseRecipe, stringifyRecipe, splitIngredient, stripMd, guessCategory,
     exportAll, splitBlocks, suggestFileName,
+    extractVideoUrl, normalizeVideoUrl, detectVideoType, bilibiliEmbed,
+    videoCanPlayInside, videoSiteLabel,
   };
 });
 
@@ -3338,9 +3509,288 @@ window.DEFAULT_RECIPES_TEXT = "==========  菜谱 1  ==========\n\n# 轻卡凉�
   }
 
   /* ================================================================
+     6. 跳一跳
+     按住蓄力、松开起跳，复刻微信小程序那版。
+     摔倒可以无限复活：分数保留，角色回到当前方块中心接着跳。
+     ================================================================ */
+  function Jump() {
+    const state = { score: 0, over: false, paused: false, label: '', events: [] };
+    const COLORS = ['#6E5B4B', '#5C6B57', '#6B565C', '#4F6170', '#7A6448'];
+
+    let W = 0;
+    let H = 0;
+    let groundY = 0;
+    let unit = 0;
+
+    let blocks = [];
+    let cur = 0;
+
+    let px = 0;
+    let py = 0;
+
+    let charging = false;
+    let power = 0;
+
+    let jumping = false;
+    let jElapsed = 0;
+    let jDur = 380;
+    let jFrom = 0;
+    let jTo = 0;
+    let jPeak = 0;
+
+    let falling = false;
+    let fallSpeed = 0;
+
+    let camX = 0;
+    let camTarget = 0;
+    let labelTtl = 0;
+
+    function spawnNext() {
+      const last = blocks[blocks.length - 1];
+      const gap = unit * (8 + Math.random() * 14);
+      const bw = unit * (14 + Math.random() * 12);
+      blocks.push({
+        x: last.x + last.w + gap,
+        w: bw,
+        color: COLORS[blocks.length % COLORS.length],
+      });
+    }
+
+    function buildWorld() {
+      blocks = [];
+      const firstW = unit * 26;
+      const firstX = unit * 10;
+      blocks.push({ x: firstX, w: firstW, color: COLORS[0] });
+      spawnNext();
+      cur = 0;
+      px = firstX + firstW / 2;
+      py = groundY;
+      camX = 0;
+      camTarget = 0;
+    }
+
+    function reset() {
+      state.score = 0;
+      state.over = false;
+      state.label = '';
+      state.events.length = 0;
+      charging = false;
+      power = 0;
+      jumping = false;
+      falling = false;
+      fallSpeed = 0;
+      jElapsed = 0;
+      labelTtl = 0;
+      camX = 0;
+      camTarget = 0;
+      blocks = [];
+      if (unit > 0) buildWorld();
+    }
+
+    function startJump() {
+      // 最短也要跳出脚下这块方块（最宽的方块半宽 13u），否则轻点一下就原地摔死
+      const dist = unit * (16 + power * 32);
+      jFrom = px;
+      jTo = px + dist;
+      jElapsed = 0;
+      jDur = 330 + power * 170;
+      jPeak = unit * (11 + power * 7);
+      jumping = true;
+      charging = false;
+      power = 0;
+      state.label = '';
+      labelTtl = 0;
+      state.events.push('drop');
+    }
+
+    function land() {
+      let idx = -1;
+      for (let i = 0; i < blocks.length; i++) {
+        const b = blocks[i];
+        if (px >= b.x && px <= b.x + b.w) { idx = i; break; }
+      }
+      // 没踩到下一块：跳短了或者跳过头
+      if (idx <= cur) {
+        falling = true;
+        fallSpeed = unit * 0.06;
+        state.label = '';
+        state.events.push('hurt');
+        return;
+      }
+
+      cur = idx;
+      const b = blocks[idx];
+      const off = Math.abs(px - (b.x + b.w / 2));
+      if (off < unit * 2.2) {
+        state.score += 2;
+        state.label = '正中中心 +2';
+        state.events.push('line');
+      } else {
+        state.score += 1;
+        state.label = '+1';
+        state.events.push('eat');
+      }
+      labelTtl = 900;
+
+      spawnNext();
+      camTarget = Math.max(0, px - W * 0.34);
+    }
+
+    reset();
+
+    return {
+      state,
+      // 蓄力语义靠 press/release，宿主不要连发
+      holdRepeat: false,
+      reset,
+      resize(w, h) {
+        if (w <= 0 || h <= 0) return;
+        W = w;
+        H = h;
+        groundY = H * 0.62;
+        unit = W / 100;
+        if (!blocks.length) reset();
+      },
+      press(a) {
+        if (a !== 'a') return;
+        if (state.over || jumping || falling || charging) return;
+        charging = true;
+        power = 0;
+        labelTtl = 0;
+      },
+      release(a) {
+        if (a !== 'a' || !charging) return;
+        startJump();
+      },
+      input() {},
+      canRevive() {
+        return state.over;
+      },
+      revive() {
+        state.over = false;
+        state.events.length = 0;
+        falling = false;
+        jumping = false;
+        charging = false;
+        power = 0;
+        fallSpeed = 0;
+        jElapsed = 0;
+        state.label = '';
+        labelTtl = 0;
+
+        const b = blocks[cur];
+        if (!b) return;
+        px = b.x + b.w / 2;
+        py = groundY;
+        camTarget = Math.max(0, px - W * 0.34);
+        camX = camTarget;
+        if (blocks.length <= cur + 1) spawnNext();
+      },
+      update(dt) {
+        if (state.over || unit <= 0) return;
+
+        camX += (camTarget - camX) * Math.min(1, dt / 110);
+        if (labelTtl > 0) {
+          labelTtl -= dt;
+          if (labelTtl <= 0) state.label = '';
+        }
+
+        if (falling) {
+          fallSpeed += dt * 0.0026;
+          py += fallSpeed * dt;
+          if (py > H + unit * 16) {
+            state.over = true;
+            state.events.push('over');
+          }
+          return;
+        }
+
+        if (charging) {
+          power = Math.min(1, power + dt * 0.0017);
+          state.label = '蓄力 ' + Math.round(power * 100) + '%';
+          return;
+        }
+
+        if (jumping) {
+          jElapsed += dt;
+          const t = Math.max(0, Math.min(1, jElapsed / jDur));
+          px = jFrom + (jTo - jFrom) * t;
+          py = groundY - Math.sin(t * Math.PI) * jPeak;
+          if (t >= 1) {
+            py = groundY;
+            jumping = false;
+            land();
+          }
+        }
+      },
+      render(ctx, w, h) {
+        ctx.fillStyle = C.bg;
+        ctx.fillRect(0, 0, w, h);
+        if (unit <= 0) return;
+
+        // 远景地平线
+        const horizon = groundY + (h - groundY) * 0.62;
+        ctx.strokeStyle = C.grid;
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.moveTo(0, horizon);
+        ctx.lineTo(w, horizon);
+        ctx.stroke();
+
+        // 方块
+        const bh = h - groundY;
+        blocks.forEach((b) => {
+          const sx = b.x - camX;
+          if (sx > w + unit * 26 || sx + b.w < -unit * 26) return;
+          fillRR(ctx, sx, groundY, b.w, bh, unit * 2.6, b.color);
+          ctx.globalAlpha = 0.16;
+          fillRR(ctx, sx, groundY, b.w, unit * 2.2, unit * 1.6, C.light);
+          ctx.globalAlpha = 1;
+        });
+
+        // 影子
+        if (!falling) {
+          ctx.globalAlpha = 0.3;
+          ctx.fillStyle = '#000';
+          ctx.beginPath();
+          ctx.ellipse(px - camX, groundY + unit * 1.4, unit * 3.2, unit * 0.9, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.globalAlpha = 1;
+        }
+
+        // 角色：蓄力时压扁变宽
+        const squash = charging ? power : 0;
+        const bodyW = unit * 7 * (1 + squash * 0.34);
+        const bodyH = unit * 12 * (1 - squash * 0.36);
+        const sx2 = px - camX;
+        fillRR(ctx, sx2 - bodyW / 2, py - bodyH, bodyW, bodyH, unit * 2.4, C.light);
+        ctx.fillStyle = C.brand2;
+        ctx.beginPath();
+        ctx.arc(sx2, py - bodyH - unit * 1.4, unit * 2.8 * (1 - squash * 0.2), 0, Math.PI * 2);
+        ctx.fill();
+
+        // 蓄力条
+        if (charging) {
+          const barW = w * 0.56;
+          const barX = (w - barW) / 2;
+          const barY = h - unit * 13;
+          fillRR(ctx, barX, barY, barW, unit * 3, unit * 1.5, C.darkPanel);
+          if (power > 0.01) {
+            fillRR(ctx, barX, barY, barW * power, unit * 3, unit * 1.5, C.brand);
+          }
+        }
+      },
+    };
+  }
+
+  /* ================================================================
      对外接口
      ================================================================ */
   const META = [
+    {
+      key: 'jump', name: '跳一跳', desc: '按住蓄力松开起跳，摔倒可无限复活',
+      icon: 'jump', hint: '按住「跳」蓄力，松开起跳', pad: 'single', action: '跳',
+    },
     {
       key: 'snake', name: '贪吃蛇', desc: '吃到红色的果子，别撞墙也别咬到自己',
       icon: 'snake', hint: '方向键转向',
@@ -3364,6 +3814,7 @@ window.DEFAULT_RECIPES_TEXT = "==========  菜谱 1  ==========\n\n# 轻卡凉�
   ];
 
   const FACTORY = {
+    jump: Jump,
     snake: Snake,
     tetris: Tetris,
     sokoban: Sokoban,
@@ -3406,6 +3857,7 @@ const I = {
   pin: '<path d="M17,3H7A2,2 0 0,0 5,5V21L12,18L19,21V5C19,3.89 18.1,3 17,3Z"/>',
   cart: '<path d="M7,18c-1.1,0 -1.99,0.9 -1.99,2S5.9,22 7,22s2,-0.9 2,-2 -0.9,-2 -2,-2zM1,2v2h2l3.6,7.59 -1.35,2.45c-0.16,0.28 -0.25,0.61 -0.25,0.96 0,1.1 0.9,2 2,2h12v-2L7.42,15c-0.14,0 -0.25,-0.11 -0.25,-0.25l0.03,-0.12 0.9,-1.63h7.45c0.75,0 1.41,-0.41 1.75,-1.03l3.58,-6.49c0.08,-0.14 0.12,-0.31 0.12,-0.48 0,-0.55 -0.45,-1 -1,-1L5.21,4l-0.94,-2L1,2zM17,18c-1.1,0 -1.99,0.9 -1.99,2s0.89,2 1.99,2 2,-0.9 2,-2 -0.9,-2 -2,-2z"/>',
   setting: '<path d="M19.14 12.94a7.07 7.07 0 0 0 0-1.88l2.03-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.6-.22l-2.39.96a7.03 7.03 0 0 0-1.62-.94l-.36-2.54a.5.5 0 0 0-.5-.42h-3.84a.5.5 0 0 0-.49.42l-.36 2.54c-.58.24-1.12.55-1.62.94l-2.39-.96a.5.5 0 0 0-.6.22L2.71 8.84a.5.5 0 0 0 .12.64l2.03 1.58a7.07 7.07 0 0 0 0 1.88l-2.03 1.58a.5.5 0 0 0-.12.64l1.92 3.32c.13.22.39.3.6.22l2.39-.96c.5.39 1.04.7 1.62.94l.36 2.54c.04.24.25.42.49.42h3.84c.25 0 .46-.18.5-.42l.36-2.54c.58-.24 1.12-.55 1.62-.94l2.39.96c.22.08.47 0 .6-.22l1.92-3.32a.5.5 0 0 0-.12-.64l-2.03-1.58zM12 15.6A3.6 3.6 0 1 1 12 8.4a3.6 3.6 0 0 1 0 7.2z"/>',
+  play: '<path d="M8 5.14v13.72L19.5 12z"/>',
 };
 
 const svg = (name, size = 22, opacity = 1) =>
@@ -3499,6 +3951,19 @@ const imgDel = (k) => tx('images', 'readwrite').then((s) => reqToPromise(s.delet
 // ---------------------------------------------------------------- 图片
 
 const urlCache = new Map();
+
+/**
+ * 丢掉一张图的缓存。
+ *
+ * 必须连 Blob URL 一起 revoke：只 delete key 的话，那张图的数据会一直挂在内存里，
+ * 换封面几十次之后页面就明显变卡了。
+ */
+function dropUrl(key) {
+  if (!key) return;
+  const url = urlCache.get(key);
+  if (url) URL.revokeObjectURL(url);
+  urlCache.delete(key);
+}
 
 async function imageUrl(key) {
   if (!key) return null;
@@ -3659,6 +4124,7 @@ function newRecipe() {
     id: 0, name: '', category: 'home', cover: null, description: '',
     servings: 2, minutes: 0, difficulty: 1,
     ingredients: [], steps: [], createdAt: 0, updatedAt: 0,
+    videoUrl: '', videoType: '',
   };
 }
 
@@ -3961,6 +4427,7 @@ const GAME_ICONS = {
   box: '<rect x="4.5" y="7" width="15" height="12" rx="2"/><path d="M4.5 11h15M12 7v12"/>',
   plane: '<path d="M12 3.2c.9 0 1.6 1.3 1.6 3.2v2.3l5.5 3.2c.6.35.9.8.9 1.5v1.2l-6.4-1.9v3.6l1.8 1.4v1.2L12 18.1l-3.4 1.9v-1.2l1.8-1.4v-3.6l-6.4 1.9v-1.2c0-.7.3-1.15.9-1.5l5.5-3.2V6.4c0-1.9.7-3.2 1.6-3.2z"/>',
   tank: '<rect x="4" y="10" width="16" height="8" rx="2.5"/><path d="M11 10V6h5"/><circle cx="8" cy="19.5" r="1.4"/><circle cx="16" cy="19.5" r="1.4"/>',
+  jump: '<rect x="3.5" y="17.5" width="6" height="3.5" rx="1.2"/><rect x="14.5" y="14.5" width="6" height="6.5" rx="1.2"/><path d="M6.5 15.5C8 10.5 14.5 10.5 16.5 13.5"/><circle cx="6.5" cy="12.2" r="1.7"/>',
 };
 
 function gameIcon(name, size = 26) {
@@ -4094,11 +4561,22 @@ function playGameEvents(events) {
 let gameRaf = null;
 let gameInst = null;
 let gameKey = null;
+/** 离开游戏页要摘掉的键盘/尺寸监听 */
+let gameCleanup = null;
+/** 重新拉起主循环（复活用） */
+let gameStartLoop = null;
 
 function stopGame() {
   if (gameRaf) cancelAnimationFrame(gameRaf);
   gameRaf = null;
   gameInst = null;
+  gameStartLoop = null;
+  // 以前只在「返回列表」那条路径摘监听，点「再来一局」会再挂一份，
+  // 结果是第二局里每按一次键动作执行两次
+  if (gameCleanup) {
+    gameCleanup();
+    gameCleanup = null;
+  }
 }
 
 function openGame(key) {
@@ -4124,16 +4602,17 @@ function openGame(key) {
       <canvas id="gameCanvas"></canvas>
     </div>
 
-    <div class="game-pad">
+    <div class="game-pad${meta.pad === 'single' ? ' single' : ''}">
+      ${meta.pad === 'single' ? '' : `
       <div class="dpad">
         <button class="pad-btn up" data-k="up" aria-label="上"><i class="pad-ic up">${svg('chevron', 24)}</i></button>
         <button class="pad-btn left" data-k="left" aria-label="左"><i class="pad-ic left">${svg('chevron', 24)}</i></button>
         <button class="pad-btn right" data-k="right" aria-label="右"><i class="pad-ic right">${svg('chevron', 24)}</i></button>
         <button class="pad-btn down" data-k="down" aria-label="下"><i class="pad-ic down">${svg('chevron', 24)}</i></button>
-      </div>
+      </div>`}
       <div class="acts">
-        <button class="act-btn" data-k="a">A</button>
-        <button class="act-btn alt" data-k="b">B</button>
+        <button class="act-btn${meta.pad === 'single' ? ' big' : ''}" data-k="a">${meta.action || 'A'}</button>
+        ${meta.pad === 'single' ? '' : '<button class="act-btn alt" data-k="b">B</button>'}
       </div>
     </div>
   </div>`;
@@ -4194,7 +4673,15 @@ function openGame(key) {
       }
       gameRaf = requestAnimationFrame(tick);
     }
-    gameRaf = requestAnimationFrame(tick);
+
+    // 复活时用它把循环重新拉起来，不用重建整页 DOM
+    gameStartLoop = () => {
+      if (!gameInst) return;
+      last = performance.now();
+      if (gameRaf) cancelAnimationFrame(gameRaf);
+      gameRaf = requestAnimationFrame(tick);
+    };
+    gameStartLoop();
   });
 
   // 虚拟按键：按住连续触发
@@ -4210,7 +4697,10 @@ function openGame(key) {
     };
     const start = (e) => {
       buzz(14);
+      if (gameInst && gameInst.press) gameInst.press(action);
       fire(e);
+      // 跳一跳靠「按住蓄力」，不能连发，否则一按就跳出去了
+      if (!gameInst || gameInst.holdRepeat === false) return;
       delay = setTimeout(() => {
         timer = setInterval(() => { if (gameInst) gameInst.input(action); }, 95);
       }, 280);
@@ -4219,6 +4709,7 @@ function openGame(key) {
       clearTimeout(delay);
       clearInterval(timer);
       timer = null;
+      if (gameInst && gameInst.release) gameInst.release(action);
     };
 
     btn.addEventListener('pointerdown', start);
@@ -4238,15 +4729,17 @@ function openGame(key) {
     const act = keyMap[e.key];
     if (!act || !gameInst) return;
     e.preventDefault();
+    // 长按住时浏览器会连发 keydown，蓄力游戏只认第一次
+    if (!e.repeat && gameInst.press) gameInst.press(act);
     gameInst.input(act);
   };
+  const onKeyUp = (e) => {
+    const act = keyMap[e.key];
+    if (!act || !gameInst) return;
+    if (gameInst.release) gameInst.release(act);
+  };
   document.addEventListener('keydown', onKey);
-  // 离开游戏页时把监听摘掉
-  const cleanup = () => document.removeEventListener('keydown', onKey);
-  const backBtn = $('#gameBack');
-  const prevBack = backBtn.onclick;
-  backBtn.onclick = () => { saveBestIfBetter(key); cleanup(); stopGame(); showGames(); };
-  void prevBack;
+  document.addEventListener('keyup', onKeyUp);
 
   // 窗口尺寸变化（旋转屏幕 / 拖窗口）
   const onResize = () => {
@@ -4256,6 +4749,13 @@ function openGame(key) {
     gameInst.state.score = before.score;
   };
   window.addEventListener('resize', onResize);
+
+  // 统一交给 stopGame() 摘，保证每条离开路径都会清理
+  gameCleanup = () => {
+    document.removeEventListener('keydown', onKey);
+    document.removeEventListener('keyup', onKeyUp);
+    window.removeEventListener('resize', onResize);
+  };
 }
 
 /** 中途退出也要记住最高分，否则玩得再高也白费 */
@@ -4269,7 +4769,15 @@ function finishGame(key, name, score) {
   const prev = getBest(key);
   const isNew = score > prev;
   if (isNew) setBest(key, score);
-  stopGame();
+
+  // 只停循环，先别拆监听：跳一跳点「复活」还要接着玩
+  if (gameRaf) {
+    cancelAnimationFrame(gameRaf);
+    gameRaf = null;
+  }
+
+  const inst = gameInst;
+  const canRevive = !!(inst && typeof inst.canRevive === 'function' && inst.canRevive());
 
   const mask = document.createElement('div');
   mask.className = 'mask';
@@ -4278,18 +4786,30 @@ function finishGame(key, name, score) {
       <h4>${isNew ? '新纪录！' : '本局结束'}</h4>
       <p>${name}　得分 <b>${score}</b>${isNew || prev <= 0 ? '' : `<br>最高分 ${prev}`}</p>
       <div class="acts">
-        <button class="primary" id="goAgain">再来一局</button>
+        ${canRevive ? '<button class="primary" id="goRevive">复活继续（无限）</button>' : ''}
+        <button${canRevive ? '' : ' class="primary"'} id="goAgain">再来一局</button>
         <button id="goBack">返回游戏列表</button>
       </div>
     </div>`;
   phone.appendChild(mask);
 
+  if (canRevive) {
+    mask.querySelector('#goRevive').onclick = () => {
+      mask.remove();
+      inst.revive();
+      gameInst = inst;
+      if (gameStartLoop) gameStartLoop();
+    };
+  }
+
   mask.querySelector('#goAgain').onclick = () => {
     mask.remove();
+    stopGame();
     openGame(key);
   };
   mask.querySelector('#goBack').onclick = () => {
     mask.remove();
+    stopGame();
     showGames();
   };
 }
@@ -4509,6 +5029,50 @@ function openShopping() {
   render();
 }
 
+// ---------------------------------------------------------------- 视频
+
+function videoCardHTML(r, previewing) {
+  if (!r.videoUrl || previewing) return '';
+  const type = r.videoType || P.detectVideoType(r.videoUrl);
+  const site = P.videoSiteLabel(r.videoUrl);
+  const inside = P.videoCanPlayInside(r.videoUrl, type);
+  return `
+    <div class="video-card" id="videoCard">
+      <span class="vplay">${svg('play', 15)}</span>
+      <span class="vtext">
+        <b>${esc(site)} 视频</b>
+        <i>${inside ? '点击播放' : '需跳转浏览器或原 App'}</i>
+      </span>
+      <span class="vgo">${inside ? '播放' : '打开'}</span>
+    </div>
+    <div class="video-stage" id="videoStage" hidden></div>`;
+}
+
+/**
+ * 网页端能内嵌的只有直链和 B 站官方播放器。
+ * 小红书这类平台会返回 X-Frame-Options，iframe 必然加载失败，只能开新标签。
+ */
+function playVideo(r) {
+  const stage = $('#videoStage');
+  if (!stage || !r.videoUrl) return;
+
+  const type = r.videoType || P.detectVideoType(r.videoUrl);
+  const embed = P.bilibiliEmbed(r.videoUrl);
+
+  if (type === 'direct') {
+    stage.innerHTML = `<video controls autoplay playsinline preload="metadata" src="${esc(r.videoUrl)}"></video>`;
+  } else if (embed) {
+    stage.innerHTML = `<iframe src="${esc(embed)}" frameborder="0" scrolling="no"
+      allowfullscreen allow="autoplay; fullscreen"></iframe>`;
+  } else {
+    window.open(r.videoUrl, '_blank', 'noopener');
+    toast('该平台不允许网页内嵌，已在新标签打开');
+    return;
+  }
+  stage.hidden = false;
+  stage.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+}
+
 // ---------------------------------------------------------------- 详情页
 
 // 做法切换状态：detailVariant = -1 表示原做法
@@ -4565,6 +5129,8 @@ function showDetail(id, transition = 'right') {
           ${chipRow}
           <div class="desc ${desc ? '' : 'muted'}">${esc(desc || '暂无描述')}</div>
 
+          ${videoCardHTML(r, previewing)}
+
           ${ings.length ? `
             <hr class="sep">
             <h3 class="sec-title">食材清单</h3>
@@ -4609,6 +5175,7 @@ function showDetail(id, transition = 'right') {
     detailId = null;
     showList('left');
   };
+  if ($('#videoCard')) $('#videoCard').onclick = () => playVideo(r);
   if ($('#btnEdit')) $('#btnEdit').onclick = () => openEditor(id, 'detail');
   if ($('#btnAi')) $('#btnAi').onclick = () => askMissing(id);
   if ($('#btnPin')) {
@@ -4847,6 +5414,14 @@ function editorView(d) {
           </div>
         </div>
 
+        <div class="opt-block">
+          <div class="label">视频（选填）</div>
+          <input class="field" id="fVideo" autocomplete="off"
+                 placeholder="粘贴视频链接或整段分享文案，支持小红书 / B 站 / mp4 直链"
+                 value="${esc(d.videoUrl || '')}">
+          <div class="video-state" id="videoState" hidden></div>
+        </div>
+
         <details class="more">
           <summary>更多选项（人份 / 时长 / 难度）</summary>
           <div class="row-3">
@@ -4880,6 +5455,7 @@ function openEditor(id, from) {
   state.draft = origin ? clone(origin) : newRecipe();
   state.dirty = false;
   state.userPickedCat = !!origin;
+  state.videoCleared = false;
 
   renderEditor();
 }
@@ -4916,7 +5492,7 @@ async function pickCoverSource(fileInput) {
   else if (v === 'remove') {
     const old = state.draft.cover;
     state.draft.cover = null;
-    if (old) { await imgDel(old); urlCache.delete(old); }
+    if (old) { await imgDel(old); dropUrl(old); }
     state.dirty = true;
     updateCoverUI();
   }
@@ -5057,7 +5633,7 @@ async function applyPickedImage(item, mask, body) {
 
     const old = state.draft.cover;
     state.draft.cover = key;
-    if (old) { await imgDel(old); urlCache.delete(old); }
+    if (old) { await imgDel(old); dropUrl(old); }
 
     state.dirty = true;
     mask.remove();
@@ -5152,7 +5728,7 @@ async function generateCover() {
 
     const old = state.draft.cover;
     state.draft.cover = key;
-    if (old) { await imgDel(old); urlCache.delete(old); }
+    if (old) { await imgDel(old); dropUrl(old); }
 
     state.dirty = true;
     mask.remove();
@@ -5212,6 +5788,17 @@ function bindEditorEvents() {
     state.dirty = true;
   };
 
+  const videoInput = $('#fVideo');
+  if (videoInput) {
+    videoInput.addEventListener('input', () => {
+      state.dirty = true;
+      // 用户手动清空后，别让正文里的 `@视频：` 又把它填回来
+      state.videoCleared = !videoInput.value.trim();
+      updateVideoState();
+    });
+    updateVideoState();
+  }
+
   const fileInput = $('#fileInput');
   $('#coverPick').onclick = () => pickCoverSource(fileInput);
   fileInput.onchange = async () => {
@@ -5221,7 +5808,7 @@ function bindEditorEvents() {
     try {
       const old = d.cover;
       d.cover = await storeImage(file);
-      if (old) { await imgDel(old); urlCache.delete(old); }
+      if (old) { await imgDel(old); dropUrl(old); }
       state.dirty = true;
       updateCoverUI();
       hydrateImages($('#coverPick'));
@@ -5232,7 +5819,7 @@ function bindEditorEvents() {
     e.stopPropagation();
     const old = d.cover;
     d.cover = null;
-    if (old) { await imgDel(old); urlCache.delete(old); }
+    if (old) { await imgDel(old); dropUrl(old); }
     state.dirty = true;
     updateCoverUI();
   };
@@ -5319,6 +5906,40 @@ function runParse() {
     state.draft.category = parsed.category;
     renderCatBar();
   }
+
+  // 正文里带 `@视频：` 时（导入的 TXT 就有）回填到视频框；
+  // 已经有内容就以视频框为准，别拿旧文本覆盖用户刚填的链接
+  const vInput = $('#fVideo');
+  if (vInput && parsed.videoUrl && !state.videoCleared && !vInput.value.trim()) {
+    vInput.value = parsed.videoUrl;
+    updateVideoState();
+  }
+}
+
+/** 视频输入框下方的识别提示 */
+function updateVideoState() {
+  const input = $('#fVideo');
+  const box = $('#videoState');
+  if (!input || !box) return;
+
+  const url = P.normalizeVideoUrl(input.value);
+  if (!url) {
+    if (!input.value.trim()) {
+      box.hidden = true;
+      box.textContent = '';
+    } else {
+      // 填了东西却抠不出链接，说清楚，别让用户以为已经存上了
+      box.hidden = false;
+      box.classList.add('bad');
+      box.textContent = '没识别出链接，请确认是 http(s):// 开头的地址';
+    }
+    return;
+  }
+  box.classList.remove('bad');
+  const type = P.detectVideoType(url);
+  box.hidden = false;
+  box.textContent = `已识别：${P.videoSiteLabel(url)} · ` +
+    (P.videoCanPlayInside(url, type) ? '可在 App 内播放' : '需跳转浏览器或原 App');
 }
 
 function renderPreview() {
@@ -5381,7 +6002,7 @@ async function tryCloseEditor() {
     const origin = state.recipes.find((r) => r.id === state.editId);
     if (state.draft.cover && state.draft.cover !== (origin && origin.cover)) {
       await imgDel(state.draft.cover);
-      urlCache.delete(state.draft.cover);
+      dropUrl(state.draft.cover);
     }
     leaveEditor();
   }
@@ -5417,6 +6038,11 @@ async function saveDraft() {
   d.servings = Number.isNaN(serv) ? 0 : Math.min(99, Math.max(0, serv));
   d.minutes = Number.isNaN(minu) ? 0 : Math.min(9999, Math.max(0, minu));
 
+  // 视频以输入框为准：没有 `@视频：` 行的菜谱，正文解析不出链接
+  const vUrl = P.normalizeVideoUrl($('#fVideo') ? $('#fVideo').value : '');
+  d.videoUrl = vUrl;
+  d.videoType = vUrl ? P.detectVideoType(vUrl) : '';
+
   const now = Date.now();
   if (!d.id) { d.id = nextId(); d.createdAt = now; }
   d.updatedAt = now;
@@ -5438,10 +6064,10 @@ async function doDelete() {
   const origin = state.recipes.find((r) => r.id === id);
   try {
     await dbDel(id);
-    if (origin && origin.cover) { await imgDel(origin.cover); urlCache.delete(origin.cover); }
+    if (origin && origin.cover) { await imgDel(origin.cover); dropUrl(origin.cover); }
     if (state.draft.cover && state.draft.cover !== (origin && origin.cover)) {
       await imgDel(state.draft.cover);
-      urlCache.delete(state.draft.cover);
+      dropUrl(state.draft.cover);
     }
     state.recipes = await dbAll();
     state.dirty = false;
@@ -5561,6 +6187,8 @@ async function doImportFile(file) {
         steps: parsed.steps.slice(),
         createdAt: now,
         updatedAt: now,
+        videoUrl: parsed.videoUrl || '',
+        videoType: parsed.videoType || '',
       }));
       added++;
     } catch {
@@ -5967,11 +6595,34 @@ async function boot() {
     await seedIfNeeded();
     state.recipes = await dbAll();
   } catch (err) {
+    // 读不出数据就彻底别进主界面：以前是置空继续跑，之后新建菜谱会从 id=1 开始，
+    // 直接覆盖库里已有的 1、2、3 号菜谱
     console.error(err);
-    state.recipes = [];
-    setTimeout(() => toast('当前环境不支持本地存储，改动不会被保存'), 400);
+    state.storageBroken = true;
+    showStorageError();
+    return;
   }
   showList();
+}
+
+/** 本地存储不可用时的兜底页，明确只读、不给编辑入口 */
+function showStorageError() {
+  root.innerHTML = `
+  <div class="view">
+    <div class="edit-top">
+      <div class="title">无法读取本地数据</div>
+      <span style="width:40px"></span>
+    </div>
+    <div class="scroll">
+      <div class="games-body">
+        <div class="games-intro">
+          浏览器没能打开本地数据库，常见原因是无痕模式、站点数据被禁用，或存储空间已满。<br><br>
+          为避免覆盖已有菜谱，这里不提供编辑入口。<br><br>
+          换一个普通窗口打开，或清理浏览器存储后刷新即可恢复。
+        </div>
+      </div>
+    </div>
+  </div>`;
 }
 
 function tickClock() {

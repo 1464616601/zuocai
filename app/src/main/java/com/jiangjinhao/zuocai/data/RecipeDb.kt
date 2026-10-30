@@ -31,7 +31,9 @@ class RecipeDb private constructor(context: Context) :
                 open_count INTEGER NOT NULL DEFAULT 0,
                 search_count INTEGER NOT NULL DEFAULT 0,
                 variants TEXT NOT NULL DEFAULT '[]',
-                pinned INTEGER NOT NULL DEFAULT 0
+                pinned INTEGER NOT NULL DEFAULT 0,
+                video_url TEXT NOT NULL DEFAULT '',
+                video_type TEXT NOT NULL DEFAULT ''
             )
             """.trimIndent()
         )
@@ -48,10 +50,42 @@ class RecipeDb private constructor(context: Context) :
             // v3：同一道菜的其他做法
             db.execSQL("ALTER TABLE $TABLE ADD COLUMN variants TEXT NOT NULL DEFAULT '[]'")
         }
+        // 用 addColumn 而不是裸 ALTER：v4 那次忘了提 DB_VERSION，
+        // 从 v2 升上来的库里其实没有 pinned 列，这里补齐才不会重复加列报错
         if (oldVersion < 4) {
             // v4：常做标记（置顶）
-            db.execSQL("ALTER TABLE $TABLE ADD COLUMN pinned INTEGER NOT NULL DEFAULT 0")
+            addColumn(db, "pinned", "INTEGER NOT NULL DEFAULT 0")
         }
+        if (oldVersion < 5) {
+            // v5：做菜视频链接
+            addColumn(db, "video_url", "TEXT NOT NULL DEFAULT ''")
+            addColumn(db, "video_type", "TEXT NOT NULL DEFAULT ''")
+        }
+    }
+
+    /**
+     * 降级安装（装回旧 APK、或者从旧版本的云备份恢复库）时，默认实现会直接抛
+     * SQLiteDowngradeFailedException，App 每次启动都崩。这里重建空库，至少还能用。
+     */
+    override fun onDowngrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
+        db.execSQL("DROP TABLE IF EXISTS $TABLE")
+        onCreate(db)
+    }
+
+    private fun addColumn(db: SQLiteDatabase, name: String, ddl: String) {
+        if (hasColumn(db, name)) return
+        db.execSQL("ALTER TABLE $TABLE ADD COLUMN $name $ddl")
+    }
+
+    private fun hasColumn(db: SQLiteDatabase, name: String): Boolean {
+        db.rawQuery("PRAGMA table_info($TABLE)", null).use { c ->
+            val idx = c.getColumnIndex("name")
+            if (idx < 0) return false
+            while (c.moveToNext()) {
+                if (c.getString(idx) == name) return true
+            }
+        }
+        return false
     }
 
     // ---------------------------------------------------------------- 写
@@ -69,16 +103,18 @@ class RecipeDb private constructor(context: Context) :
         return id
     }
 
-    fun update(recipe: Recipe) {
+    /** @return 受影响的行数，0 表示这条记录已经不在了 */
+    fun update(recipe: Recipe): Int {
         val now = System.currentTimeMillis()
         val values = toValues(recipe).apply { put("updated_at", now) }
-        writableDatabase.update(TABLE, values, "id = ?", arrayOf(recipe.id.toString()))
-        recipe.updatedAt = now
+        val rows = writableDatabase.update(TABLE, values, "id = ?", arrayOf(recipe.id.toString()))
+        if (rows > 0) recipe.updatedAt = now
+        return rows
     }
 
-    fun delete(id: Long) {
+    /** @return 实际删掉的行数 */
+    fun delete(id: Long): Int =
         writableDatabase.delete(TABLE, "id = ?", arrayOf(id.toString()))
-    }
 
     /**
      * 只改封面，不动 updated_at。
@@ -242,6 +278,8 @@ class RecipeDb private constructor(context: Context) :
         put("steps", recipe.stepsJson())
         put("variants", recipe.variantsJson())
         put("pinned", if (recipe.pinned) 1 else 0)
+        put("video_url", recipe.videoUrl.trim())
+        put("video_type", recipe.videoType.trim())
     }
 
     private fun fromCursor(c: Cursor): Recipe = Recipe(
@@ -258,12 +296,14 @@ class RecipeDb private constructor(context: Context) :
         createdAt = c.getLong(c.getColumnIndexOrThrow("created_at")),
         updatedAt = c.getLong(c.getColumnIndexOrThrow("updated_at")),
         variants = Variant.parse(c.getString(c.getColumnIndexOrThrow("variants"))).toMutableList(),
-        pinned = c.getInt(c.getColumnIndexOrThrow("pinned")) == 1
+        pinned = c.getInt(c.getColumnIndexOrThrow("pinned")) == 1,
+        videoUrl = c.getString(c.getColumnIndexOrThrow("video_url")) ?: "",
+        videoType = c.getString(c.getColumnIndexOrThrow("video_type")) ?: ""
     )
 
     companion object {
         private const val DB_NAME = "zuocai.db"
-        private const val DB_VERSION = 3
+        private const val DB_VERSION = 5
         private const val TABLE = "recipes"
 
         @Volatile

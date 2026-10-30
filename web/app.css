@@ -439,6 +439,74 @@ body {
 }
 .desc.muted { color: var(--text-3); }
 
+/* 视频卡片 */
+.video-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 16px;
+  padding: 13px 12px 13px 14px;
+  border-radius: 16px;
+  background: var(--surface-sunken);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.video-card:active { opacity: .8; }
+.video-card .vplay {
+  flex: 0 0 34px;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--brand);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.video-card .vtext {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.video-card .vtext b {
+  font-size: 14px;
+  color: var(--text-1);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.video-card .vtext i {
+  font-style: normal;
+  font-size: 11px;
+  color: var(--text-3);
+}
+.video-card .vgo {
+  flex: 0 0 auto;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--brand);
+}
+
+.video-stage { margin-top: 12px; }
+.video-stage video,
+.video-stage iframe {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border: 0;
+  border-radius: 14px;
+  background: #000;
+}
+
+.video-state {
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--text-3);
+}
+.video-state.bad { color: var(--danger); }
+
 hr.sep {
   border: 0;
   height: 1px;
@@ -1524,6 +1592,15 @@ textarea.field {
 .act-btn:active {
   transform: scale(.92);
   box-shadow: 0 2px 6px rgba(0, 0, 0, .3);
+}
+
+/* 只要一个大按钮的游戏（跳一跳）：大按钮居中 */
+.game-pad.single { justify-content: center; }
+.act-btn.big {
+  width: 96px;
+  height: 96px;
+  font-size: 20px;
+  letter-spacing: .06em;
 }
 
 .gameover .acts { gap: 8px; }

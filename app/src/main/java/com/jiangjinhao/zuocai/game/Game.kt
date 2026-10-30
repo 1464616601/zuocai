@@ -17,6 +17,20 @@ interface Game {
     /** 顶部副标题，会覆盖 hint；空串表示用 hint */
     var label: String
 
+    /** 按住时是否自动连发。跳一跳是「按住蓄力、松开起跳」，必须关掉 */
+    val holdRepeat: Boolean get() = true
+
+    /** 这局结束后能不能原地复活（分数保留） */
+    fun canRevive(): Boolean = false
+
+    /** 复活：清掉结束状态、把角色放回安全位置，分数不动 */
+    fun revive() {}
+
+    /** 按住 / 松开。需要蓄力的游戏用，其他游戏不用管 */
+    fun onPress(action: String) {}
+
+    fun onRelease(action: String) {}
+
     fun resize(w: Int, h: Int)
     fun reset()
     fun update(dtMs: Long)
